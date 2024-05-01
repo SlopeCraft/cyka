@@ -12,8 +12,7 @@ template <class gene, class mut_gene_view, class const_gene_view, size_t n_obj>
 class GA_base {
 public:
   using gene_type = gene;
-  using population_type =
-      population<gene, mut_gene_view, const_gene_view, n_obj>;
+  using population_type = population<gene, mut_gene_view, const_gene_view>;
 
   [[nodiscard]] struct option &option() noexcept { return this->option_; }
 
