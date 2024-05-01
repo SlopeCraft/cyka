@@ -177,6 +177,9 @@ public:
     this->crossover(crossover_list, crossover_function);
     this->mutate(mutate_list, mutate_function);
   }
+
+  // selection
+  virtual void select(std::span<const bool> LUT_is_selected) noexcept = 0;
 };
 
 template <class gene, class mut_gene_view, class const_gene_view,
@@ -238,6 +241,34 @@ public:
       gene b{};
       mutate_function(this->gene_map.at(src_idx), b);
       this->gene_map.emplace(this->gene_map.size(), std::move(b));
+    }
+  }
+
+  void select(std::span<const bool> LUT_is_selected) noexcept override {
+    assert(LUT_is_selected.size() == this->population_size());
+    for (size_t idx = 0; idx < this->population_size(); idx++) {
+      if (!LUT_is_selected[idx]) {
+        this->gene_map.erase(idx);
+      }
+    }
+
+    size_t counter = 0;
+    for (auto it = this->gene_map.begin();;) {
+      if (it == this->gene_map.end()) {
+        break;
+      }
+      assert(it->first >= counter);
+      if (it->first == counter) {
+        counter++;
+        ++it;
+        continue;
+      }
+      assert(it->first > counter);
+      assert(!this->gene_map.contains(counter));
+
+      this->gene_map.emplace(counter, std::move(it->second));
+      it = this->gene_map.erase(it);
+      counter++;
     }
   }
 };
@@ -406,6 +437,32 @@ public:
     }
 
     this->gene_matrix = new_mat;
+  }
+
+  void select(std::span<const bool> LUT_is_selected) noexcept override {
+    assert(LUT_is_selected.size() == this->population_size());
+    const size_t left_pop_size = [&LUT_is_selected]() {
+      size_t result = 0;
+      for (bool select : LUT_is_selected) {
+        if (select) {
+          result++;
+        }
+      }
+      return result;
+    }();
+
+    population_matrix_type new_gene_mat;
+    new_gene_mat.setZero(this->gene_matrix.rows(), left_pop_size);
+
+    size_t c_write = 0;
+    for (size_t c_read = 0; c_read < this->gene_matrix.cols(); c_read++) {
+      if (LUT_is_selected[c_read]) {
+        new_gene_mat[c_write] = this->gene_matrix[c_read];
+        c_write++;
+      }
+    }
+    assert(c_write == left_pop_size);
+    this->gene_matrix = left_pop_size;
   }
 };
 
