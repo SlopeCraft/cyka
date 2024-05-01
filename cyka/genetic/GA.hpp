@@ -5,7 +5,7 @@
 #ifndef HEURISTICFLOWR_GA_H
 #define HEURISTICFLOWR_GA_H
 
-#include "population.h"
+#include "population.hpp"
 
 namespace cyka::genetic {
 template <class gene, class mut_gene_view, class const_gene_view, size_t n_obj>
