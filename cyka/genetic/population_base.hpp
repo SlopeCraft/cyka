@@ -20,45 +20,6 @@
 
 namespace cyka::genetic {
 
-struct option {
-
-  /**
-   * \brief Size of the population. Default value is 100
-   *
-   */
-  size_t population_size{100};
-
-  /**
-   * \brief GA will stop once best solution hasn't been improved for continuous
-   * maxFailTimes generations. Default value is 100.
-   *
-   * \note This member doesn't works for MOGA solvers like NSGA2 and NSGA3 since
-   * there's no proper way to estimate if the PF hasn't been changing for
-   * generations.
-   *
-   */
-  uint64_t early_stop_times{50};
-
-  /**
-   * \brief Maximum generation. GA will stop once reached this limitation.
-   * Default value is 300
-   *
-   */
-  uint64_t max_generations{300};
-
-  /**
-   * \brief Probability of a non-elite individual to join crossover. Default
-   * value is 80%
-   *
-   */
-  double crossover_probability{0.8};
-
-  /**
-   * \brief Probability of a non-elite individual to get mutated. Default value
-   * is 5%
-   */
-  double mutate_probability{0.05};
-};
 
 
 template <class const_gene_view, class mut_gene_view>
@@ -68,24 +29,32 @@ using crossover_function = void(const_gene_view a, const_gene_view b,
 template <class const_gene_view, class mut_gene_view>
 using mutate_function = void(const_gene_view src, mut_gene_view dest);
 
+namespace detail {
+class population_common_base {
+public:
+  virtual ~population_common_base() = default;
+};
+
+} // namespace detail
+
 template <class gene, class mut_gene_view, class const_gene_view>
-//  requires std::move_constructible<gene> && std::is_move_assignable_v<gene> &&
-//           std::is_default_constructible_v<gene>
-//           //           std::is_constructible_v<mut_gene_view, gene> &&
-//           //           std::is_constructible_v<const_gene_view, gene> &&
-//           //           std::is_constructible_v<const_gene_view,
-//           mut_gene_view>
-//           //           &&
-//           && std::is_assignable_v<gene, mut_gene_view> &&
-//           std::is_assignable_v<gene, const_gene_view> &&
-//           std::is_assignable_v<mut_gene_view, const_gene_view>
-class population {
+  requires std::move_constructible<gene> && std::is_move_assignable_v<gene> &&
+           std::is_default_constructible_v<gene>
+           //           std::is_constructible_v<mut_gene_view, gene> &&
+           //           std::is_constructible_v<const_gene_view, gene> &&
+           //           std::is_constructible_v<const_gene_view,
+           //           mut_gene_view >
+           //           &&
+           && std::is_assignable_v<gene, mut_gene_view> &&
+           std::is_assignable_v<gene, const_gene_view> &&
+           std::is_assignable_v<mut_gene_view, const_gene_view>
+class population_base : public detail::population_common_base {
 public:
   using gene_type = gene;
   using mut_gene_view_type = mut_gene_view;
   using const_gene_view_type = const_gene_view;
 
-  virtual ~population() = default;
+  virtual ~population_base() override = default;
 
   [[nodiscard]] virtual size_t population_size() const noexcept = 0;
 
@@ -128,7 +97,20 @@ public:
   virtual void select(std::span<const bool> LUT_is_selected) noexcept = 0;
 };
 
-
+template <class pop_t>
+concept is_population =
+    requires(pop_t *p, const pop_t *p_const) {
+      typename pop_t::gene_type;
+      typename pop_t::mut_gene_view_type;
+      typename pop_t::const_gene_view_type;
+      p_const->population_size();
+      p->gene_at(0);
+      p_const->gene_at(0);
+    } &&
+    std::is_base_of_v<population_base<typename pop_t::gene_type,
+                                      typename pop_t::mut_gene_view_type,
+                                      typename pop_t::const_gene_view_type>,
+                      pop_t>;
 
 } // namespace cyka::genetic
 

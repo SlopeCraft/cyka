@@ -4,7 +4,7 @@
 
 #ifndef CYKA_POPULATION_IN_VECTOR_HPP
 #define CYKA_POPULATION_IN_VECTOR_HPP
-#include "population.hpp"
+#include "population_base.hpp"
 #include <deque>
 #include <vector>
 
@@ -24,7 +24,8 @@ concept is_random_accessible =
 //   requires is_random_accessible<deque_like>
 
 template <class gene, class allocator = std::allocator<gene>>
-class population_in_vector : public population<gene, gene &, const gene &> {
+class population_in_vector
+    : public population_base<gene, gene &, const gene &> {
 protected:
   std::vector<gene, allocator> genes;
 
@@ -92,6 +93,7 @@ public:
       }
       this->genes.erase(this->genes.begin() + i);
     }
+    static_assert(is_population<population_in_vector>);
   }
 };
 

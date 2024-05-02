@@ -3,9 +3,11 @@
 //
 #include <Eigen/Dense>
 #include <cyka/genetic/GA.hpp>
+#include <cyka/genetic/GA_system.hpp>
 #include <cyka/genetic/population_in_map.hpp>
 #include <cyka/genetic/population_in_matrix.hpp>
 #include <cyka/genetic/population_in_vector.hpp>
+#include <cyka/genetic/single_object_selector.hpp>
 #include <iostream>
 
 int main() {
@@ -23,8 +25,8 @@ int main() {
   //  return 0;
   cyka::genetic::population_in_matrix<float, 10> pop_10_1_col;
   cyka::genetic::population_in_map<Eigen::Array<float, 20, 1>> pop_map;
-
-  std::vector<Eigen::ArrayXf> vec;
-
   cyka::genetic::population_in_vector<Eigen::Array<float, 20, 1>> pop_vec;
+
+  cyka::genetic::GA_system<decltype(pop_10_1_col), 1> sys{
+      [](auto) { return 0.0; }};
 }

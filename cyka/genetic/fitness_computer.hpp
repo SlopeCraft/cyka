@@ -5,9 +5,12 @@
 #ifndef CYKA_FITNESS_COMPUTER_HPP
 #define CYKA_FITNESS_COMPUTER_HPP
 
-#include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
+
+#include <Eigen/Dense>
+
+#include "population_base.hpp"
 
 namespace cyka::genetic {
 
@@ -60,6 +63,8 @@ public:
   [[nodiscard]] virtual fitness_type
   fitness_of(size_t index) const noexcept = 0;
 
+  virtual size_t population_size() const noexcept = 0;
+
   virtual void fitness_of_all(fitness_matrix &result) const noexcept {
     result.setZero(this->num_objectives(), this->population_size());
     for (size_t idx = 0; idx < this->population_size(); idx++) {
@@ -77,6 +82,7 @@ public:
     return result;
   }
 };
+
 } // namespace cyka::genetic
 
 #endif // CYKA_FITNESS_COMPUTER_HPP

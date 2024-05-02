@@ -5,7 +5,7 @@
 #ifndef CYKA_POPULATION_IN_MATRIX_HPP
 #define CYKA_POPULATION_IN_MATRIX_HPP
 
-#include "population.hpp"
+#include "population_base.hpp"
 
 namespace cyka::genetic {
 
@@ -19,7 +19,7 @@ constexpr Eigen::Index map_n_objectives_to_rows(size_t n_obj) {
 template <typename scalar_t, size_t n_features,
           int eigen_mat_option = Eigen::ColMajor>
 class population_in_matrix
-    : public population<
+    : public population_base<
           Eigen::Array<scalar_t, map_n_objectives_to_rows(n_features), 1>,
           Eigen::Map<
               Eigen::Array<scalar_t, map_n_objectives_to_rows(n_features), 1>>,
@@ -29,7 +29,7 @@ public:
   using population_matrix_type =
       Eigen::Array<scalar_t, map_n_objectives_to_rows(n_features),
                    Eigen::Dynamic, eigen_mat_option>;
-  using base_type = population<
+  using base_type = population_base<
       Eigen::Array<scalar_t, map_n_objectives_to_rows(n_features), 1>,
       Eigen::Map<
           Eigen::Array<scalar_t, map_n_objectives_to_rows(n_features), 1>>,
@@ -221,6 +221,8 @@ public:
     }
     assert(c_write == left_pop_size);
     this->gene_matrix = left_pop_size;
+
+    static_assert(is_population<population_in_matrix>);
   }
 };
 } // namespace cyka::genetic

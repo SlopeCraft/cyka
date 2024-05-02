@@ -5,18 +5,18 @@
 #ifndef CYKA_POPULATION_IN_MAP_HPP
 #define CYKA_POPULATION_IN_MAP_HPP
 
-#include "population.hpp"
+#include "population_base.hpp"
 #include <map>
 
 namespace cyka::genetic {
 
 template <class gene>
-class population_in_map : public population<gene, gene &, const gene &> {
+class population_in_map : public population_base<gene, gene &, const gene &> {
 protected:
   std::map<size_t, gene> gene_map;
 
 public:
-  using base_t = population<gene, gene &, const gene &>;
+  using base_t = population_base<gene, gene &, const gene &>;
   using typename base_t::const_gene_view_type;
   using typename base_t::mut_gene_view_type;
 
@@ -104,6 +104,8 @@ public:
       it = this->gene_map.erase(it);
       counter++;
     }
+
+    static_assert(is_population<population_in_map>);
   }
 };
 } // namespace cyka::genetic
