@@ -197,14 +197,13 @@ public:
     this->gene_matrix = new_mat;
   }
 
-  void select(std::span<const bool> LUT_is_selected) noexcept override {
+  void select(std::span<const uint16_t> LUT_is_selected) noexcept override {
     assert(LUT_is_selected.size() == this->population_size());
+
     const size_t left_pop_size = [&LUT_is_selected]() {
       size_t result = 0;
-      for (bool select : LUT_is_selected) {
-        if (select) {
-          result++;
-        }
+      for (uint16_t times : LUT_is_selected) {
+        result += times;
       }
       return result;
     }();
@@ -213,14 +212,14 @@ public:
     new_gene_mat.setZero(this->gene_matrix.rows(), left_pop_size);
 
     size_t c_write = 0;
-    for (size_t c_read = 0; c_read < this->gene_matrix.cols(); c_read++) {
-      if (LUT_is_selected[c_read]) {
+    for (auto c_read = 0zu; c_read < this->gene_matrix.cols(); c_read++) {
+      for (uint16_t i = 0; i < LUT_is_selected[c_read]; i++) {
         new_gene_mat.col(c_write) = this->gene_matrix.col(c_read);
         c_write++;
       }
     }
     assert(c_write == left_pop_size);
-    this->gene_matrix = left_pop_size;
+    this->gene_matrix = new_gene_mat;
 
     static_assert(is_population<population_in_matrix>);
   }

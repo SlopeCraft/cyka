@@ -13,9 +13,9 @@ namespace cyka::genetic::SO_selector {
 
 namespace detail {
 
-void select_genes_by_score(Eigen::ArrayXd &probability_score,
-                           Eigen::ArrayX<bool> &is_kept,
-                           size_t num_to_eliminate,
+inline void select_genes_by_score(Eigen::ArrayXd &probability_score,
+                                  Eigen::ArrayX<uint16_t> &is_kept,
+                                  size_t num_to_eliminate,
                            std::mt19937 &rand_engine) noexcept {
   assert(num_to_eliminate < probability_score.size());
   const ptrdiff_t expected_group_size =
@@ -23,7 +23,7 @@ void select_genes_by_score(Eigen::ArrayXd &probability_score,
   assert(expected_group_size > 0);
   assert((probability_score >= 0).all());
   assert(probability_score.sum() > 0);
-  is_kept.setConstant(probability_score.size(), true);
+  is_kept.setConstant(probability_score.size(), 1);
 
   std::uniform_real_distribution<double> rand{0, 1};
   size_t eliminated_num = 0;
@@ -50,11 +50,11 @@ void select_genes_by_score(Eigen::ArrayXd &probability_score,
     }
   }
 
-  assert(is_kept.count() == expected_group_size);
+  assert(is_kept.sum() == expected_group_size);
 }
 
-void sort_genes(std::span<const double> fitness,
-                std::vector<size_t> &rank) noexcept {
+inline void sort_genes(std::span<const double> fitness,
+                       std::vector<size_t> &rank) noexcept {
   rank.resize(fitness.size());
   for (size_t i = 0; i < fitness.size(); i++) {
     rank[i] = i;
@@ -80,7 +80,8 @@ sort_genes(const Eigen::Array<double, 1, Eigen::Dynamic> &fitness) noexcept {
 
 void select_ranked_genes(Eigen::ArrayXd &probability_score,
                          std::span<const size_t> rank,
-                         Eigen::ArrayX<bool> &is_kept, size_t num_to_eliminate,
+                         Eigen::ArrayX<uint16_t> &is_kept,
+                         size_t num_to_eliminate,
                          std::mt19937 &rand_engine) noexcept {
   assert(probability_score.size() == rank.size());
   assert(num_to_eliminate < probability_score.size());
@@ -89,7 +90,7 @@ void select_ranked_genes(Eigen::ArrayXd &probability_score,
   const ptrdiff_t expected_group_size =
       probability_score.size() - ptrdiff_t(num_to_eliminate);
   assert(expected_group_size > 0);
-  is_kept.setConstant(probability_score.size(), true);
+  is_kept.setConstant(probability_score.size(), 1);
 
   std::uniform_real_distribution<double> rand{0, 1};
   size_t num_eliminated = 0;
@@ -118,20 +119,21 @@ void select_ranked_genes(Eigen::ArrayXd &probability_score,
     }
   }
 
-  assert(is_kept.count() == expected_group_size);
+  assert(is_kept.sum() == expected_group_size);
 }
 } // namespace detail
 
 class truncation : public selector_base<1> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
-              Eigen::ArrayX<bool> &is_kept, std::mt19937 &) noexcept override {
+              Eigen::ArrayX<uint16_t> &is_kept,
+              std::mt19937 &) noexcept override {
     is_kept.resize(fitness.size());
-    is_kept.fill(false);
+    is_kept.fill(1);
 
     const auto rank = detail::sort_genes(fitness);
     for (size_t i = 0; i < expected_group_size; i++) {
-      is_kept[ptrdiff_t(rank[i])] = true;
+      is_kept[ptrdiff_t(rank[i])] = 1;
     }
   }
 };
@@ -168,14 +170,14 @@ public:
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
-              Eigen::ArrayX<bool> &is_kept,
+              Eigen::ArrayX<uint16_t> &is_kept,
               std::mt19937 &rand_engine) noexcept override {
 
     const size_t num_to_eliminate = fitness.size() - expected_group_size;
     const size_t pop_size_before = fitness.cols();
     if (num_to_eliminate <= 0) {
       is_kept.resize(int64_t(pop_size_before));
-      is_kept.fill(true);
+      is_kept.fill(1);
       return;
     }
     assert(expected_group_size < fitness.size());
@@ -230,14 +232,14 @@ public:
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
-              Eigen::ArrayX<bool> &is_kept,
+              Eigen::ArrayX<uint16_t> &is_kept,
               std::mt19937 &rand_engine) noexcept override {
     assert(fitness.rows() == 1);
     assert(fitness.cols() >= expected_group_size);
     const size_t pop_size_before = fitness.cols();
     const size_t num_to_eliminate = pop_size_before - expected_group_size;
     is_kept.resize(int64_t(pop_size_before));
-    is_kept.fill(true);
+    is_kept.fill(1);
     if (num_to_eliminate <= 0) {
       return;
     }
@@ -293,14 +295,14 @@ public:
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
-              Eigen::ArrayX<bool> &is_kept,
+              Eigen::ArrayX<uint16_t> &is_kept,
               std::mt19937 &rand_engine) noexcept override {
     assert(fitness.rows() == 1);
     assert(fitness.cols() >= expected_group_size);
     const size_t pop_size_before = fitness.cols();
     const size_t num_to_eliminate = pop_size_before - expected_group_size;
     is_kept.resize(int64_t(pop_size_before));
-    is_kept.fill(true);
+    is_kept.fill(1);
     if (num_to_eliminate <= 0) {
       return;
     }

@@ -78,32 +78,50 @@ public:
     }
   }
 
-  void select(std::span<const bool> LUT_is_selected) noexcept override {
-    assert(LUT_is_selected.size() == this->population_size());
-    for (size_t idx = 0; idx < this->population_size(); idx++) {
-      if (!LUT_is_selected[idx]) {
-        this->gene_map.erase(idx);
-      }
-    }
+  void select(std::span<const uint16_t> LUT_selected_count) noexcept override {
+    assert(LUT_selected_count.size() == this->population_size());
 
+    std::map<size_t, gene> new_genes;
     size_t counter = 0;
-    for (auto it = this->gene_map.begin();;) {
-      if (it == this->gene_map.end()) {
-        break;
-      }
-      assert(it->first >= counter);
-      if (it->first == counter) {
-        counter++;
-        ++it;
+    for (auto src_idx = 0zu; src_idx < this->population_size(); src_idx++) {
+      if (LUT_selected_count[src_idx] <= 0) {
         continue;
       }
-      assert(it->first > counter);
-      assert(!this->gene_map.contains(counter));
-
-      this->gene_map.emplace(counter, std::move(it->second));
-      it = this->gene_map.erase(it);
+      // `this->gene_map.at(src_idx)` will be repeated N times, copy previous
+      // N-1 genes
+      for (auto i = 0zu; i + 1 < LUT_selected_count[src_idx]; i++) {
+        new_genes.emplace(counter, this->gene_map.at(src_idx));
+        counter++;
+      }
+      // Move the last
+      new_genes.emplace(counter, std::move(this->gene_map.at(src_idx)));
       counter++;
     }
+
+    //    for (size_t idx = 0; idx < this->population_size(); idx++) {
+    //      if (!LUT_is_selected[idx]) {
+    //        this->gene_map.erase(idx);
+    //      }
+    //    }
+    //
+    //    size_t counter = 0;
+    //    for (auto it = this->gene_map.begin();;) {
+    //      if (it == this->gene_map.end()) {
+    //        break;
+    //      }
+    //      assert(it->first >= counter);
+    //      if (it->first == counter) {
+    //        counter++;
+    //        ++it;
+    //        continue;
+    //      }
+    //      assert(it->first > counter);
+    //      assert(!this->gene_map.contains(counter));
+    //
+    //      this->gene_map.emplace(counter, std::move(it->second));
+    //      it = this->gene_map.erase(it);
+    //      counter++;
+    //    }
 
     static_assert(is_population<population_in_map>);
   }

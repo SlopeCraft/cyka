@@ -94,7 +94,8 @@ public:
   }
 
   // selection
-  virtual void select(std::span<const bool> LUT_is_selected) noexcept = 0;
+  virtual void
+  select(std::span<const uint16_t> LUT_selected_count) noexcept = 0;
 };
 
 template <class pop_t>

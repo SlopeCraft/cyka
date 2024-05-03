@@ -84,15 +84,23 @@ public:
     }
   }
 
-  void select(std::span<const bool> LUT_is_selected) noexcept override {
-    assert(LUT_is_selected.size() == this->population_size());
+  void select(std::span<const uint16_t> LUT_selected_count) noexcept override {
+    assert(LUT_selected_count.size() == this->population_size());
 
-    for (int64_t i = size_t(LUT_is_selected.size()) - 1; i >= 0; i--) {
-      if (LUT_is_selected[i]) {
+    std::vector<gene, allocator> new_genes;
+    new_genes.reserve(this->genes.size());
+    for (auto src_idx = 0zu; src_idx < LUT_selected_count.size(); src_idx++) {
+      if (LUT_selected_count[src_idx] <= 0) {
         continue;
       }
-      this->genes.erase(this->genes.begin() + i);
+
+      for (uint16_t i = 0; i + 1 < LUT_selected_count[src_idx]; i++) {
+        new_genes.emplace_back(this->genes[src_idx]);
+      }
+      new_genes.emplace_back(std::move(this->genes[src_idx]));
     }
+    this->genes = new_genes;
+
     static_assert(is_population<population_in_vector>);
   }
 };
