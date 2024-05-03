@@ -10,6 +10,8 @@
 #include <cyka/genetic/single_object_selector.hpp>
 #include <iostream>
 
+void initiate_SO_selectors() noexcept;
+
 int main() {
   //  Eigen::Array<float, 5, 20> mat;
   //  //  mat.resize(5, 20);
@@ -29,4 +31,15 @@ int main() {
 
   cyka::genetic::GA_system<decltype(pop_10_1_col), 1> sys{
       [](auto) { return 0.0; }};
+  initiate_SO_selectors();
+}
+
+void initiate_SO_selectors() noexcept {
+  using namespace cyka::genetic::SO_selector;
+  truncation trunc;
+  tournament tour;
+  monte_carlo mc;
+  linear_rank lr;
+  exponential_rank er;
+  boltzmann b;
 }
