@@ -5,9 +5,11 @@
 #ifndef CYKA_CROSSOVEROR_HPP
 #define CYKA_CROSSOVEROR_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <concepts>
+#include <iterator>
 #include <random>
 
 #include <Eigen/Dense>
@@ -87,6 +89,78 @@ void single_point_crossover(const_gene_view p1, const_gene_view p2,
     }
   }
 }
+
+template <class mut_gene_view, class const_gene_view>
+void multi_point_crossover(const_gene_view p1, const_gene_view p2,
+                           mut_gene_view c1, mut_gene_view c2,
+                           size_t num_points, std::mt19937 &rand) noexcept {
+  assert(p1.size() == p2.size());
+  c1.resize(p1.size());
+  c2.resize(p1.size());
+
+  // iterator to receive
+  struct sampler_it {
+    using iterator_category = std::output_iterator_tag;
+
+    using value_type = ptrdiff_t;
+    using difference_type = ptrdiff_t;
+    using pointer = ptrdiff_t *;
+    using reference = ptrdiff_t &;
+    ptrdiff_t prev{0};
+    ptrdiff_t cur{-1};
+    bool swap{true};
+    const_gene_view *p1;
+    const_gene_view *p2;
+    mut_gene_view *c1;
+    mut_gene_view *c2;
+    sampler_it(const_gene_view *p1, const_gene_view *p2, mut_gene_view *c1,
+               mut_gene_view *c2)
+        : p1{p1}, p2{p2}, c1{c1}, c2{c2} {};
+
+    ptrdiff_t &operator*() noexcept { return this->cur; }
+
+    sampler_it &operator++() noexcept {
+      assert(cur < this->p1->size());
+      assert(cur >= prev);
+      const ptrdiff_t len = cur - prev;
+      auto src1 = p1->segment(prev, len);
+      auto src2 = p2->segment(prev, len);
+      if (swap) {
+        c1->segment(prev, len) = src2;
+        c2->segment(prev, len) = src1;
+      } else {
+        c1->segment(prev, len) = src1;
+        c2->segment(prev, len) = src2;
+      }
+      this->swap = not this->swap;
+      this->prev = this->cur;
+      this->cur = -1;
+
+      return *this;
+    }
+  };
+
+  struct index_it {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = ptrdiff_t;
+    using difference_type = ptrdiff_t;
+    using pointer = ptrdiff_t *;
+    using reference = ptrdiff_t &;
+    ptrdiff_t idx;
+    ptrdiff_t &operator*() noexcept { return this->idx; }
+    index_it &operator++() noexcept {
+      this->idx++;
+      return *this;
+    }
+    bool operator!=(index_it b) const noexcept {
+      return this->idx not_eq b.idx;
+    }
+  };
+
+  std::sample(index_it{.idx = 0}, index_it{.idx = p1.size()},
+              sampler_it{&p1, &p2, &c1, &c2}, num_points, rand);
+}
+
 } // namespace detail
 
 template <class mut_gene_view, class const_gene_view>
@@ -159,6 +233,33 @@ public:
                                    std::clamp<ptrdiff_t>(idx, 0, a.size() - 1));
   }
 };
+template <class mut_gene_view, class const_gene_view>
+class multi_point_crossover
+    : public crossover_base<mut_gene_view, const_gene_view> {
+public:
+  struct crossover_option {
+    size_t num_crossover_points{2};
+  };
+
+protected:
+  crossover_option crossover_option_;
+
+public:
+  [[nodiscard]] const auto &crossover_option() const noexcept {
+    return this->crossover_option_;
+  }
+  void set_crossover_option(const struct crossover_option &opt) noexcept {
+    this->crossover_option_ = opt;
+  }
+  void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
+                 mut_gene_view d, std::mt19937 &mt) noexcept override {
+    assert(a.size() == b.size());
+
+    detail::multi_point_crossover(
+        a, b, c, d, this->crossover_option_.num_crossover_points, mt);
+  }
+};
+
 } // namespace cyka::genetic
 
 #endif // CYKA_CROSSOVEROR_HPP

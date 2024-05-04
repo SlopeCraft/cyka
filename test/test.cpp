@@ -55,4 +55,7 @@ void initiate_crossovers() noexcept {
   cyka::genetic::single_point_crossover<Eigen::Map<gene_t>,
                                         Eigen::Map<const gene_t>>
       sc;
+  cyka::genetic::multi_point_crossover<Eigen::Map<gene_t>,
+                                       Eigen::Map<const gene_t>>
+      mc;
 }
