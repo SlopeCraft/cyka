@@ -38,15 +38,14 @@ public:
 } // namespace detail
 
 template <class gene, class mut_gene_view, class const_gene_view>
-  requires std::move_constructible<gene> && std::is_move_assignable_v<gene> &&
+  requires std::move_constructible<gene> and std::is_move_assignable_v<gene> and
            std::is_default_constructible_v<gene>
-           //           std::is_constructible_v<mut_gene_view, gene> &&
-           //           std::is_constructible_v<const_gene_view, gene> &&
+           //           std::is_constructible_v<mut_gene_view, gene> and
+           //           std::is_constructible_v<const_gene_view, gene> and
            //           std::is_constructible_v<const_gene_view,
-           //           mut_gene_view >
-           //           &&
-           && std::is_assignable_v<gene, mut_gene_view> &&
-           std::is_assignable_v<gene, const_gene_view> &&
+           //           mut_gene_view > and
+           and std::is_assignable_v<gene, mut_gene_view> and
+           std::is_assignable_v<gene, const_gene_view> and
            std::is_assignable_v<mut_gene_view, const_gene_view>
 class population_base : public detail::population_common_base {
 public:
@@ -54,7 +53,7 @@ public:
   using mut_gene_view_type = mut_gene_view;
   using const_gene_view_type = const_gene_view;
 
-  virtual ~population_base() override = default;
+  virtual ~population_base() = default;
 
   [[nodiscard]] virtual size_t population_size() const noexcept = 0;
 
@@ -107,7 +106,7 @@ concept is_population =
       p_const->population_size();
       p->gene_at(0);
       p_const->gene_at(0);
-    } &&
+    } and
     std::is_base_of_v<population_base<typename pop_t::gene_type,
                                       typename pop_t::mut_gene_view_type,
                                       typename pop_t::const_gene_view_type>,

@@ -25,7 +25,7 @@ public:
 
 template <class GA_sys>
 concept is_GA_system =
-    std::is_base_of_v<typename GA_sys::population_type, GA_sys> &&
+    std::is_base_of_v<typename GA_sys::population_type, GA_sys> and
     std::is_base_of_v<typename GA_sys::fitness_computer_type, GA_sys>;
 
 /// GA system with changeable fitness function

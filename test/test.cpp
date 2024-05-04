@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <cyka/genetic/GA.hpp>
 #include <cyka/genetic/GA_system.hpp>
+#include <cyka/genetic/crossover.hpp>
 #include <cyka/genetic/population_in_map.hpp>
 #include <cyka/genetic/population_in_matrix.hpp>
 #include <cyka/genetic/population_in_vector.hpp>
@@ -42,4 +43,16 @@ void initiate_SO_selectors() noexcept {
   linear_rank lr;
   exponential_rank er;
   boltzmann b;
+}
+
+void initiate_crossovers() noexcept {
+  using gene_t = Eigen::ArrayXd;
+  cyka::genetic::arithmetic_crossover<Eigen::Map<gene_t>,
+                                      Eigen::Map<const gene_t>>
+      ac;
+  cyka::genetic::uniform_crossover<Eigen::Map<gene_t>, Eigen::Map<const gene_t>>
+      uc;
+  cyka::genetic::single_point_crossover<Eigen::Map<gene_t>,
+                                        Eigen::Map<const gene_t>>
+      sc;
 }

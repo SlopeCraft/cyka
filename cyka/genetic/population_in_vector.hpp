@@ -49,7 +49,7 @@ public:
         const std::function<void(gene &)> &init_function) noexcept override {
     this->genes.clear();
     this->genes.reserve(num_population);
-    for (size_t i; i < num_population; i++) {
+    for (size_t i = 0; i < num_population; i++) {
       gene g{};
       init_function(g);
       this->genes.emplace_back(std::move(g));

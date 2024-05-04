@@ -30,7 +30,7 @@ inline void select_genes_by_score(Eigen::ArrayXd &probability_score,
   while (eliminated_num < num_to_eliminate) {
     double r = rand(rand_engine) * probability_score.sum();
     for (ptrdiff_t i = 0; i < probability_score.size(); i++) {
-      if (!selected_count[i]) {
+      if (not selected_count[i]) {
         assert(probability_score[i] == 0);
         //          continue;
       }
@@ -44,9 +44,11 @@ inline void select_genes_by_score(Eigen::ArrayXd &probability_score,
       }
     }
     if (r > 0) [[unlikely]] {
-      assert(("Impossible condition, r should be less or equal to the sum of "
-              "whole array",
-              0));
+      const bool
+          impossible_condition_r_should_be_less_or_equal_to_the_sum_of_the_whole_array =
+              false;
+      assert(
+          impossible_condition_r_should_be_less_or_equal_to_the_sum_of_the_whole_array);
     }
   }
 
@@ -99,7 +101,7 @@ void select_ranked_genes(Eigen::ArrayXd &probability_score,
     for (ptrdiff_t sorted_idx = 0; sorted_idx < probability_score.size();
          sorted_idx++) {
       const auto gene_idx = (ptrdiff_t)rank[sorted_idx];
-      if (!selected_count[gene_idx]) {
+      if (not selected_count[gene_idx]) {
         assert(probability_score[sorted_idx] == 0);
       }
 
@@ -113,9 +115,11 @@ void select_ranked_genes(Eigen::ArrayXd &probability_score,
     }
 
     if (r > 0) [[unlikely]] {
-      assert(("Impossible condition, r should be less or equal to the sum of "
-              "whole array",
-              0));
+      const bool
+          impossible_condition_r_should_be_less_or_equal_to_the_sum_of_the_whole_array =
+              false;
+      assert(
+          impossible_condition_r_should_be_less_or_equal_to_the_sum_of_the_whole_array);
     }
   }
 
@@ -243,11 +247,11 @@ public:
         worst_gene_select_probability_should_be_less_than_the_best_gene_select_probability);
 
     const bool probability_should_be_greater_or_equal_to_0 =
-        opt.worst_probability >= 0 && opt.best_probability >= 0;
+        opt.worst_probability >= 0 and opt.best_probability >= 0;
     assert(probability_should_be_greater_or_equal_to_0);
 
     const bool probability_should_be_less_or_equal_to_1 =
-        opt.worst_probability <= 1 && opt.best_probability <= 1;
+        opt.worst_probability <= 1 and opt.best_probability <= 1;
     assert(probability_should_be_less_or_equal_to_1);
 
     this->option_ = opt;
