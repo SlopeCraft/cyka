@@ -16,7 +16,12 @@
 
 namespace cyka::genetic {
 
-template <class mut_gene_view, class const_gene_view> class crossover_base {
+namespace detail {
+struct empty_crossover_option {};
+} // namespace detail
+
+template <class mut_gene_view, class const_gene_view, class option_t>
+class crossover_base {
 public:
   static_assert(std::is_same_v<typename mut_gene_view::value_type,
                                typename const_gene_view::value_type>);
@@ -25,6 +30,28 @@ public:
   virtual void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                          mut_gene_view d,
                          std::mt19937 &rand_engine) noexcept = 0;
+  using crossover_option_type = option_t;
+
+protected:
+  crossover_option_type crossover_option_;
+
+public:
+  [[nodiscard]] const auto &crossover_option() const noexcept {
+    return this->crossover_option_;
+  }
+
+  [[nodiscard]] virtual std::optional<std::invalid_argument>
+  check_crossover_option(const crossover_option_type &opt) const noexcept {
+    return std::nullopt;
+  }
+
+  void set_crossover_option(crossover_option_type &&opt) {
+    auto result = this->check_crossover_option(opt);
+    if (result) {
+      throw(std::move(result.value()));
+    }
+    this->crossover_option_ = opt;
+  }
 };
 
 namespace detail {
@@ -163,54 +190,48 @@ void multi_point_crossover(const_gene_view p1, const_gene_view p2,
 
 } // namespace detail
 
+template <typename float_type> struct arithmetic_crossover_option {
+  float_type ratio{0.2};
+};
+
 template <class mut_gene_view, class const_gene_view>
 class arithmetic_crossover
-    : public crossover_base<mut_gene_view, const_gene_view> {
+    : public crossover_base<
+          mut_gene_view, const_gene_view,
+          arithmetic_crossover_option<typename mut_gene_view::value_type>> {
 public:
   using float_type = mut_gene_view::value_type;
   static_assert(std::is_floating_point_v<float_type>);
-  struct crossover_option {
-    float_type ratio{0.2};
-  };
 
-protected:
-  crossover_option crossover_option_;
-
-public:
-  [[nodiscard]] const auto &crossover_option() const noexcept {
-    return this->crossover_option_;
-  }
-  void set_crossover_option(const struct crossover_option &opt) noexcept {
-    assert(opt.ratio >= 0);
-    assert(opt.ratio <= 1);
-    this->crossover_option_ = opt;
+  [[nodiscard]] std::optional<std::invalid_argument>
+  check_crossover_option(const arithmetic_crossover_option<float_type> &opt)
+      const noexcept override {
+    if (opt.ratio < 0 or opt.ratio > 1) {
+      return std::invalid_argument{
+          "ratio of arithmetic crossover should be in range [0,1]"};
+    }
+    return std::nullopt;
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                  mut_gene_view d, std::mt19937 &) noexcept override {
-    detail::arithmetic_crossover(a, b, c, d, this->crossover_option_.ratio);
+    detail::arithmetic_crossover(a, b, c, d, this->crossover_option().ratio);
   }
 };
 
+struct uniform_crossover_option {
+  float swap_probability{0.5};
+};
 template <class mut_gene_view, class const_gene_view>
-class uniform_crossover
-    : public crossover_base<mut_gene_view, const_gene_view> {
+class uniform_crossover : public crossover_base<mut_gene_view, const_gene_view,
+                                                uniform_crossover_option> {
 public:
-  struct crossover_option {
-    float swap_probability{0.5};
-  };
-
-protected:
-  crossover_option crossover_option_;
-
-public:
-  [[nodiscard]] const auto &crossover_option() const noexcept {
-    return this->crossover_option_;
-  }
-  void set_crossover_option(const struct crossover_option &opt) noexcept {
-    assert(opt.swap_probability >= 0);
-    assert(opt.swap_probability <= 1);
-    this->crossover_option_ = opt;
+  std::optional<std::invalid_argument> check_crossover_option(
+      const uniform_crossover_option &opt) const noexcept override {
+    if (opt.swap_probability < 0 or opt.swap_probability > 1) {
+      return std::invalid_argument{"Swap probability should be in range [0,1]"};
+    }
+    return std::nullopt;
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
@@ -222,7 +243,8 @@ public:
 
 template <class mut_gene_view, class const_gene_view>
 class single_point_crossover
-    : public crossover_base<mut_gene_view, const_gene_view> {
+    : public crossover_base<mut_gene_view, const_gene_view,
+                            detail::empty_crossover_option> {
 public:
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                  mut_gene_view d, std::mt19937 &mt) noexcept override {
@@ -233,30 +255,22 @@ public:
                                    std::clamp<ptrdiff_t>(idx, 0, a.size() - 1));
   }
 };
+
+struct multi_crossover_option {
+  size_t num_crossover_points{2};
+};
+
 template <class mut_gene_view, class const_gene_view>
 class multi_point_crossover
-    : public crossover_base<mut_gene_view, const_gene_view> {
+    : public crossover_base<mut_gene_view, const_gene_view,
+                            multi_crossover_option> {
 public:
-  struct crossover_option {
-    size_t num_crossover_points{2};
-  };
-
-protected:
-  crossover_option crossover_option_;
-
-public:
-  [[nodiscard]] const auto &crossover_option() const noexcept {
-    return this->crossover_option_;
-  }
-  void set_crossover_option(const struct crossover_option &opt) noexcept {
-    this->crossover_option_ = opt;
-  }
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                  mut_gene_view d, std::mt19937 &mt) noexcept override {
     assert(a.size() == b.size());
 
     detail::multi_point_crossover(
-        a, b, c, d, this->crossover_option_.num_crossover_points, mt);
+        a, b, c, d, this->crossover_option().num_crossover_points, mt);
   }
 };
 

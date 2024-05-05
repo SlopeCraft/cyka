@@ -125,9 +125,12 @@ void select_ranked_genes(Eigen::ArrayXd &probability_score,
 
   assert(selected_count.sum() == expected_group_size);
 }
+
+struct empty_option {};
+
 } // namespace detail
 
-class roulette_wheel : public selector_base<1> {
+class roulette_wheel : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
@@ -138,23 +141,25 @@ public:
     detail::select_genes_by_score(scores, selected_count,
                                   fitness.size() - expected_group_size, rand);
   }
+
+  std::optional<std::invalid_argument>
+  check_select_option(const detail::empty_option &opt) const noexcept override {
+    return std::nullopt;
+  }
 };
 
-class tournament : public selector_base<1> {
+struct tournament_option {
+  size_t tournament_size = 3;
+};
+
+class tournament : public selector_base<1, tournament_option> {
 public:
-  struct option {
-    size_t tournament_size = 3;
-  };
-
-protected:
-  option option_;
-
-public:
-  [[nodiscard]] const auto &option() const noexcept { return this->option_; }
-
-  void set_option(const struct option &opt) noexcept {
-    assert(opt.tournament_size >= 1);
-    this->option_ = opt;
+  std::optional<std::invalid_argument>
+  check_select_option(const tournament_option &opt) const noexcept override {
+    if (opt.tournament_size < 1) {
+      return std::invalid_argument{"tournament size should be positive number"};
+    }
+    return std::nullopt;
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
@@ -168,8 +173,8 @@ public:
     auto choose_tournament = [this, &rand_index,
                               &rand_engine](std::vector<size_t> &src_indices) {
       src_indices.clear();
-      src_indices.reserve(this->option_.tournament_size);
-      for (auto i = 0zu; i < this->option_.tournament_size; i++) {
+      src_indices.reserve(this->select_option().tournament_size);
+      for (auto i = 0zu; i < this->select_option().tournament_size; i++) {
         const auto src_idx = rand_index(rand_engine);
         src_indices.emplace_back(src_idx);
       }
@@ -179,7 +184,7 @@ public:
     for (auto num_selected = 0zu; num_selected < expected_group_size;
          num_selected++) {
       choose_tournament(tournament);
-      assert(tournament.size() == this->option_.tournament_size);
+      assert(tournament.size() == this->select_option().tournament_size);
       tournament_fitness.setZero((ptrdiff_t)tournament.size());
       for (ptrdiff_t tournament_idx = 0; tournament_idx < tournament.size();
            tournament_idx++) {
@@ -198,7 +203,7 @@ public:
   }
 };
 
-class monte_carlo : public selector_base<1> {
+class monte_carlo : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
@@ -211,7 +216,7 @@ public:
   }
 };
 
-class truncation : public selector_base<1> {
+class truncation : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
@@ -226,35 +231,28 @@ public:
   }
 };
 
-class linear_rank : public selector_base<1> {
+struct linear_rank_option {
+  double worst_probability{0.1};
+  double best_probability{0.9};
+};
+
+class linear_rank : public selector_base<1, linear_rank_option> {
 public:
-  struct option {
-    double worst_probability{0.1};
-    double best_probability{0.9};
-  };
-
-protected:
-  option option_;
-
-public:
-  [[nodiscard]] auto &option() const noexcept { return this->option_; }
-
-  void set_option(const struct option &opt) noexcept {
-    const bool
-        worst_gene_select_probability_should_be_less_than_the_best_gene_select_probability =
-            opt.worst_probability < opt.best_probability;
-    assert(
-        worst_gene_select_probability_should_be_less_than_the_best_gene_select_probability);
-
-    const bool probability_should_be_greater_or_equal_to_0 =
-        opt.worst_probability >= 0 and opt.best_probability >= 0;
-    assert(probability_should_be_greater_or_equal_to_0);
-
-    const bool probability_should_be_less_or_equal_to_1 =
-        opt.worst_probability <= 1 and opt.best_probability <= 1;
-    assert(probability_should_be_less_or_equal_to_1);
-
-    this->option_ = opt;
+  std::optional<std::invalid_argument>
+  check_select_option(const select_option_type &opt) const noexcept override {
+    if (opt.worst_probability >= opt.best_probability) {
+      return std::invalid_argument{
+          "worst gene select probability should be less than the best gene "
+          "select probability"};
+    }
+    if (opt.worst_probability < 0) {
+      return std::invalid_argument{
+          "Probability should be greater or equal to 0"};
+    }
+    if (opt.best_probability > 1) {
+      return std::invalid_argument{"Probability should be less or equal to 1"};
+    }
+    return std::nullopt;
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
@@ -278,45 +276,33 @@ public:
 
     Eigen::ArrayXd probability_score;
     assert(pop_size_before > 0);
-    assert(this->option_.worst_probability >= 0);
-    assert(this->option_.best_probability > this->option_.worst_probability);
-    assert(this->option_.best_probability <= 1);
+    assert(this->select_option().worst_probability >= 0);
+    assert(this->select_option().best_probability >
+           this->select_option().worst_probability);
+    assert(this->select_option().best_probability <= 1);
     probability_score.setLinSpaced(
         fitness.size(),
-        this->option_.best_probability / double(pop_size_before),
-        this->option_.worst_probability / double(pop_size_before));
+        this->select_option().best_probability / double(pop_size_before),
+        this->select_option().worst_probability / double(pop_size_before));
 
     detail::select_ranked_genes(probability_score, rank, selected_count,
                                 num_to_eliminate, rand_engine);
   }
 };
 
-class exponential_rank : public selector_base<1> {
+struct exponential_rank_option {
+  double exponential_base = 0.8;
+};
+
+class exponential_rank : public selector_base<1, exponential_rank_option> {
 public:
-  struct option {
-    double exponential_base = 0.8;
-  };
-
-protected:
-  option option_;
-
-public:
-  [[nodiscard]] auto &option() const noexcept { return this->option_; }
-  void set_option(struct option &opt) noexcept {
-
-    const bool
-        the_base_number_for_exponential_rank_selection_should_be_greater_or_equal_to_0 =
-            opt.exponential_base >= 0;
-    assert(
-        the_base_number_for_exponential_rank_selection_should_be_greater_or_equal_to_0);
-
-    const bool
-        the_base_number_for_exponential_rank_selection_should_be_less_than_1 =
-            opt.exponential_base < 1;
-    assert(
-        the_base_number_for_exponential_rank_selection_should_be_less_than_1);
-
-    this->option_ = opt;
+  std::optional<std::invalid_argument>
+  check_select_option(const select_option_type &opt) const noexcept override {
+    if (opt.exponential_base < 0 || opt.exponential_base >= 1) {
+      return std::invalid_argument{"The base number for exponential rank "
+                                   "selection should be in range [0,1)"};
+    }
+    return std::nullopt;
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
@@ -336,12 +322,12 @@ public:
         std::span<const double>{fitness.data(), size_t(fitness.size())});
 
     const double c_minus_1_div_c_pow_N_minus_1 =
-        (this->option_.exponential_base - 1) /
-        (std::pow(this->option_.exponential_base, pop_size_before) - 1);
+        (this->select_option().exponential_base - 1) /
+        (std::pow(this->select_option().exponential_base, pop_size_before) - 1);
     Eigen::ArrayXd probability;
     {
       probability.setConstant(ptrdiff_t(pop_size_before),
-                              this->option_.exponential_base);
+                              this->select_option().exponential_base);
       Eigen::ArrayXd power;
       power.setLinSpaced(ptrdiff_t(pop_size_before), 0.0,
                          double(pop_size_before) - 1.0);
@@ -353,6 +339,9 @@ public:
   }
 };
 
+struct boltzmann_option {
+  double boltzmann_strength{-1.0};
+};
 /**
  * \brief The Boltzmann method works by exponential function. The probability of
  * a gene is in proportion with exp(b*f), where b is the selection strength and
@@ -362,24 +351,14 @@ public:
  * maximum problems, b should be positive, while for minimize problems, b should
  * be a negative number.
  */
-class boltzmann : public selector_base<1> {
+class boltzmann : public selector_base<1, boltzmann_option> {
 public:
-  struct option {
-    double boltzmann_strength{-1.0};
-  };
-
-protected:
-  option option_;
-
-public:
-  [[nodiscard]] auto &option() const noexcept { return this->option_; }
-  void set_option(struct option &opt) noexcept {
-    const bool
-        boltzmann_strength_should_be_non_positive_because_less_fitness_is_considered_as_better =
-            opt.boltzmann_strength <= 0;
-    assert(
-        boltzmann_strength_should_be_non_positive_because_less_fitness_is_considered_as_better);
-    this->option_ = opt;
+  std::optional<std::invalid_argument>
+  check_select_option(const select_option_type &opt) const noexcept override {
+    if (opt.boltzmann_strength > 0) {
+      return std::invalid_argument{"Boltzmann strength should be <=0"};
+    }
+    return std::nullopt;
   }
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
@@ -397,7 +376,7 @@ public:
 
     auto fitness_col = fitness.transpose();
     Eigen::ArrayXd probability_score =
-        (fitness_col * this->option_.boltzmann_strength).exp();
+        (fitness_col * this->select_option().boltzmann_strength).exp();
     //    double score_sum = probability_score.sum();
 
     detail::select_genes_by_score(probability_score, selected_count,

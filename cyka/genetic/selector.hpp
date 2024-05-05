@@ -5,6 +5,8 @@
 #ifndef CYKA_SELECTOR_HPP
 #define CYKA_SELECTOR_HPP
 
+#include <exception>
+#include <optional>
 #include <random>
 #include <type_traits>
 #include <vector>
@@ -13,7 +15,7 @@
 
 namespace cyka::genetic {
 
-template <size_t n_obj> class selector_base {
+template <size_t n_obj, class option_t> class selector_base {
 public:
   using fitness_type = fitness_computer<n_obj>::fitness_type;
   using fitness_matrix = fitness_computer<n_obj>::fitness_matrix;
@@ -32,6 +34,29 @@ public:
     this->select(fitness_of_whole_group, expected_group_size, dest,
                  rand_engine);
     return dest;
+  }
+
+  using select_option_type = option_t;
+
+protected:
+  select_option_type select_option_;
+
+public:
+  [[nodiscard]] const select_option_type &select_option() const noexcept {
+    return this->select_option_;
+  }
+
+  [[nodiscard]] virtual std::optional<std::invalid_argument>
+  check_select_option(const select_option_type &) const noexcept {
+    return std::nullopt;
+  };
+
+  void set_select_option(select_option_type &&opt) {
+    auto result = this->check_select_option(opt);
+    if (result) {
+      throw(std::move(result.value()));
+    }
+    this->select_option_ = opt;
   }
 };
 
