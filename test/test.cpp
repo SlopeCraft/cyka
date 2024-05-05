@@ -70,4 +70,6 @@ void initiate_mutators() noexcept {
   cyka::genetic::arithmetic_mutator<Eigen::Map<gene_t>,
                                     Eigen::Map<const gene_t>>
       am;
+
+  gene_t g;
 }

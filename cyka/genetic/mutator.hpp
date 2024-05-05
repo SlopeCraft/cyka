@@ -51,19 +51,27 @@ namespace detail {
 template <class eigen_vec_t>
 [[nodiscard]] std::optional<std::invalid_argument>
 check_bound_and_step(const eigen_vec_t &lb, const eigen_vec_t &ub,
-                     const eigen_vec_t &step_ratio) noexcept {
-  if ((lb.size() not_eq ub.size()) or (lb.size() not_eq step_ratio.size())) {
+                     const eigen_vec_t &step_max) noexcept {
+  if ((lb.size() not_eq ub.size()) or (lb.size() not_eq step_max.size())) {
     return std::invalid_argument{
-        "step ratio, lower and upper bound vector should have same size"};
+        "step max, lower and upper bound vector should have same size"};
   }
 
   if ((lb > ub).any()) {
     return std::invalid_argument{
         "Lower bound should be less or equal to upper bound"};
   }
-  if ((step_ratio < 0).any() or (step_ratio.abs() > 1).any()) {
-    return std::invalid_argument{"step ratio should be in range [0,1]"};
+  if ((step_max < 0).any()) {
+    return std::invalid_argument{"step_max should be in range [0,+inf)"};
   }
+  if (lb.hasNaN() or ub.hasNaN() or step_max.hasNaN()) {
+    return std::invalid_argument{
+        "step max, lower and upper bound vector shouldn't contain nan"};
+  }
+  if (not(step_max.isFinite()).all()) {
+    return std::invalid_argument{"step max should be finite"};
+  }
+
   return std::nullopt;
 }
 } // namespace detail
@@ -73,7 +81,7 @@ template <typename float_t>
 struct arithmetic_mutate_option {
   Eigen::ArrayX<float_t> lower_bound{};
   Eigen::ArrayX<float_t> upper_bound{};
-  Eigen::ArrayX<float_t> step_ratio{};
+  Eigen::ArrayX<float_t> step_max{};
 };
 
 template <class mut_gene_view, class const_gene_view>
@@ -89,7 +97,7 @@ public:
   std::optional<std::invalid_argument> check_mutate_option(
       const arithmetic_mutate_option<float_type> &opt) const noexcept override {
     return detail::check_bound_and_step(opt.lower_bound, opt.upper_bound,
-                                        opt.step_ratio);
+                                        opt.step_max);
   }
 
   void mutate(const_gene_view parent, mut_gene_view child,
@@ -101,7 +109,7 @@ public:
     for (float_type &f : child) {
       f = rand(rand_engine);
     }
-    auto r_times_step = child * this->mutate_option().step_ratio;
+    auto r_times_step = child * this->mutate_option().step_max;
     auto new_val_before_clamp = r_times_step + parent;
     auto new_val = new_val_before_clamp.max(this->mutate_option().lower_bound)
                        .min(this->mutate_option().upper_bound);
