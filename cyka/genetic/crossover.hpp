@@ -29,7 +29,7 @@ public:
 
   virtual void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                          mut_gene_view d,
-                         std::mt19937 &rand_engine) noexcept = 0;
+                         std::mt19937 &rand_engine) const noexcept = 0;
   using crossover_option_type = option_t;
 
 protected:
@@ -214,7 +214,7 @@ public:
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &) noexcept override {
+                 mut_gene_view d, std::mt19937 &) const noexcept override {
     detail::arithmetic_crossover(a, b, c, d, this->crossover_option().ratio);
   }
 };
@@ -235,7 +235,7 @@ public:
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
     detail::uniform_crossover(a, b, c, d, mt,
                               this->crossover_option().swap_probability);
   }
@@ -247,7 +247,7 @@ class single_point_crossover
                             detail::empty_crossover_option> {
 public:
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
     assert(a.size() == b.size());
     std::uniform_int_distribution<ptrdiff_t> rand_idx(1, a.size() - 2);
     const ptrdiff_t idx = rand_idx(mt);
@@ -266,7 +266,7 @@ class multi_point_crossover
                             multi_crossover_option> {
 public:
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
     assert(a.size() == b.size());
 
     detail::multi_point_crossover(

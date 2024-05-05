@@ -25,11 +25,11 @@ public:
   virtual void select(const fitness_matrix &fitness_of_whole_group,
                       size_t expected_group_size,
                       Eigen::ArrayX<uint16_t> &select_count,
-                      std::mt19937 &rand_engine) noexcept = 0;
+                      std::mt19937 &rand_engine) const noexcept = 0;
 
   [[nodiscard]] Eigen::ArrayX<uint16_t>
   select(const fitness_matrix &fitness_of_whole_group,
-         size_t expected_group_size, std::mt19937 &rand_engine) noexcept {
+         size_t expected_group_size, std::mt19937 &rand_engine) const noexcept {
     Eigen::ArrayX<uint16_t> dest;
     this->select(fitness_of_whole_group, expected_group_size, dest,
                  rand_engine);
