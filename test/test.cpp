@@ -2,7 +2,6 @@
 // Created by Joseph on 2024/5/1.
 //
 #include <Eigen/Dense>
-#include <cyka/genetic/GA.hpp>
 #include <cyka/genetic/GA_system.hpp>
 #include <cyka/genetic/crossover.hpp>
 #include <cyka/genetic/mutator.hpp>
@@ -10,7 +9,6 @@
 #include <cyka/genetic/population_in_matrix.hpp>
 #include <cyka/genetic/population_in_vector.hpp>
 #include <cyka/genetic/single_object_selector.hpp>
-#include <iostream>
 
 void initiate_SO_selectors() noexcept;
 void initiate_crossovers() noexcept;
@@ -71,5 +69,15 @@ void initiate_mutators() noexcept {
                                     Eigen::Map<const gene_t>>
       am;
 
-  gene_t g;
+  cyka::genetic::single_point_arithmetic_mutator<Eigen::Map<gene_t>,
+                                                 Eigen::Map<const gene_t>>
+      spam;
+
+  cyka::genetic::single_point_boolean_mutator<
+      Eigen::Map<Eigen::ArrayX<bool>>, Eigen::Map<const Eigen::ArrayX<bool>>>
+      spbm;
+
+  cyka::genetic::single_point_discrete_mutator<Eigen::Map<gene_t>,
+                                               Eigen::Map<const gene_t>>
+      spdm;
 }

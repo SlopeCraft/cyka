@@ -226,7 +226,7 @@ template <class mut_gene_view, class const_gene_view>
 class uniform_crossover : public crossover_base<mut_gene_view, const_gene_view,
                                                 uniform_crossover_option> {
 public:
-  std::optional<std::invalid_argument> check_crossover_option(
+  [[nodiscard]] std::optional<std::invalid_argument> check_crossover_option(
       const uniform_crossover_option &opt) const noexcept override {
     if (opt.swap_probability < 0 or opt.swap_probability > 1) {
       return std::invalid_argument{"Swap probability should be in range [0,1]"};

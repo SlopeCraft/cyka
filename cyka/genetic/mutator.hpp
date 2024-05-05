@@ -50,17 +50,33 @@ public:
 namespace detail {
 template <class eigen_vec_t>
 [[nodiscard]] std::optional<std::invalid_argument>
-check_bound_and_step(const eigen_vec_t &lb, const eigen_vec_t &ub,
-                     const eigen_vec_t &step_max) noexcept {
-  if ((lb.size() not_eq ub.size()) or (lb.size() not_eq step_max.size())) {
+check_lb_ub(const eigen_vec_t &lb, const eigen_vec_t &ub) noexcept {
+
+  if (lb.size() not_eq ub.size()) {
     return std::invalid_argument{
-        "step max, lower and upper bound vector should have same size"};
+        "Lower and upper bound vector should have same size"};
   }
 
   if ((lb > ub).any()) {
     return std::invalid_argument{
         "Lower bound should be less or equal to upper bound"};
   }
+  return std::nullopt;
+}
+
+template <class eigen_vec_t>
+[[nodiscard]] std::optional<std::invalid_argument>
+check_bound_and_step(const eigen_vec_t &lb, const eigen_vec_t &ub,
+                     const eigen_vec_t &step_max) noexcept {
+  if (auto err = check_lb_ub(lb, ub)) {
+    return err;
+  }
+
+  if (lb.size() not_eq step_max.size()) {
+    return std::invalid_argument{
+        "step max, lower and upper bound vector should have same size"};
+  }
+
   if ((step_max < 0).any()) {
     return std::invalid_argument{"step_max should be in range [0,+inf)"};
   }
@@ -74,6 +90,8 @@ check_bound_and_step(const eigen_vec_t &lb, const eigen_vec_t &ub,
 
   return std::nullopt;
 }
+
+struct empty_mutate_option {};
 } // namespace detail
 
 template <typename float_t>
@@ -83,6 +101,44 @@ struct arithmetic_mutate_option {
   Eigen::ArrayX<float_t> upper_bound{};
   Eigen::ArrayX<float_t> step_max{};
 };
+
+namespace detail {
+
+template <class mut_gene_view, class const_gene_view>
+void arithmetic_mutate(
+    const_gene_view parent, mut_gene_view child, std::mt19937 &rand_engine,
+    const arithmetic_mutate_option<typename mut_gene_view::value_type>
+        &opt) noexcept {
+  assert(parent.size() == opt.lower_bound.size());
+
+  child.resize(parent.size());
+  std::uniform_real_distribution<typename mut_gene_view::value_type> rand{-1.0,
+                                                                          1.0};
+  for (auto &f : child) {
+    f = rand(rand_engine);
+  }
+  auto r_times_step = child * opt.step_max;
+  auto new_val_before_clamp = r_times_step + parent;
+  auto new_val = new_val_before_clamp.max(opt.lower_bound).min(opt.upper_bound);
+  child = new_val;
+}
+
+template <class mut_gene_view, class const_gene_view>
+void single_point_arithmetic_mutate(
+    const_gene_view parent, mut_gene_view child, std::mt19937 &rand_engine,
+    const arithmetic_mutate_option<typename mut_gene_view::value_type>
+        &opt) noexcept {
+  child = parent;
+  std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
+  std::uniform_real_distribution<typename mut_gene_view::value_type> rand_f{-1,
+                                                                            1};
+  const ptrdiff_t idx = rand_idx(rand_engine);
+  child[idx] += rand_f(rand_engine) * opt.step_max[idx];
+
+  child = child.max(opt.lower_bound).min(opt.upper_bound);
+  assert(child.size() == parent.size());
+}
+} // namespace detail
 
 template <class mut_gene_view, class const_gene_view>
 class arithmetic_mutator
@@ -102,18 +158,84 @@ public:
 
   void mutate(const_gene_view parent, mut_gene_view child,
               std::mt19937 &rand_engine) const noexcept override {
-    assert(parent.size() == this->mutate_option().lower_bound.size());
+    detail::arithmetic_mutate(parent, child, rand_engine,
+                              this->mutate_option());
+  }
+};
 
-    child.resize(parent.size());
-    std::uniform_real_distribution<float_type> rand{-1.0, 1.0};
-    for (float_type &f : child) {
-      f = rand(rand_engine);
+template <class mut_gene_view, class const_gene_view>
+class single_point_arithmetic_mutator
+    : public arithmetic_mutator<mut_gene_view, const_gene_view> {
+public:
+  void mutate(const_gene_view parent, mut_gene_view child,
+              std::mt19937 &rand_engine) const noexcept override {
+    detail::single_point_arithmetic_mutate(parent, child, rand_engine,
+                                           this->mutate_option());
+  }
+};
+
+template <class mut_gene_view, class const_gene_view>
+class single_point_boolean_mutator
+    : public mutator_base<mut_gene_view, const_gene_view,
+                          detail::empty_mutate_option> {
+  static_assert(std::is_same_v<typename mut_gene_view::value_type, bool>);
+
+public:
+  void mutate(const_gene_view parent, mut_gene_view child,
+              std::mt19937 &rand_engine) const noexcept override {
+    child = parent;
+    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
+    const auto index = rand_idx(rand_engine);
+    child[index] = not child[index];
+  }
+};
+
+template <typename scalar_type> struct discrete_mutate_option {
+  Eigen::ArrayX<scalar_type> lower_bound;
+  Eigen::ArrayX<scalar_type> upper_bound;
+};
+
+template <class mut_gene_view, class const_gene_view>
+class single_point_discrete_mutator
+    : public mutator_base<
+          mut_gene_view, const_gene_view,
+          discrete_mutate_option<typename mut_gene_view::value_type>> {
+public:
+  using scalar_type = mut_gene_view::value_type;
+  [[nodiscard]] std::optional<std::invalid_argument> check_mutate_option(
+      const discrete_mutate_option<scalar_type> &opt) const noexcept override {
+    return detail::check_lb_ub(opt.lower_bound, opt.upper_bound);
+  }
+
+  void mutate(const_gene_view parent, mut_gene_view child,
+              std::mt19937 &rand_engine) const noexcept override {
+    child = parent;
+
+    std::uniform_real_distribution<float> rand_val{0, 1};
+    auto get_rand_idx = [&rand_val, &rand_engine](int len) -> int {
+      assert(len >= 0);
+      const int ret = int(rand_val(rand_engine) * len);
+      assert(ret < len or len == 0);
+      return ret;
+    };
+
+    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
+    const auto index = rand_idx(rand_engine);
+
+    const scalar_type old_val = child[index];
+
+    const scalar_type lb = this->mutate_option().lower_bound[index];
+    const scalar_type ub = this->mutate_option().lower_bound[index];
+
+    const scalar_type r = get_rand_idx(int(ub - lb) - 1);
+    scalar_type new_val = scalar_type(r + lb);
+    assert(new_val < ub);
+    if (new_val >= r) {
+      new_val += 1;
     }
-    auto r_times_step = child * this->mutate_option().step_max;
-    auto new_val_before_clamp = r_times_step + parent;
-    auto new_val = new_val_before_clamp.max(this->mutate_option().lower_bound)
-                       .min(this->mutate_option().upper_bound);
-    child = new_val;
+    assert(lb <= new_val and new_val <= lb);
+
+    child[index] = new_val;
   }
 };
 
