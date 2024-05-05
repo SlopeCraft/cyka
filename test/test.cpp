@@ -5,6 +5,7 @@
 #include <cyka/genetic/GA.hpp>
 #include <cyka/genetic/GA_system.hpp>
 #include <cyka/genetic/crossover.hpp>
+#include <cyka/genetic/mutator.hpp>
 #include <cyka/genetic/population_in_map.hpp>
 #include <cyka/genetic/population_in_matrix.hpp>
 #include <cyka/genetic/population_in_vector.hpp>
@@ -12,6 +13,8 @@
 #include <iostream>
 
 void initiate_SO_selectors() noexcept;
+void initiate_crossovers() noexcept;
+void initiate_mutators() noexcept;
 
 int main() {
   //  Eigen::Array<float, 5, 20> mat;
@@ -33,6 +36,8 @@ int main() {
   cyka::genetic::GA_system<decltype(pop_10_1_col), 1> sys{
       [](auto) { return 0.0; }};
   initiate_SO_selectors();
+  initiate_crossovers();
+  initiate_mutators();
 }
 
 void initiate_SO_selectors() noexcept {
@@ -58,4 +63,11 @@ void initiate_crossovers() noexcept {
   cyka::genetic::multi_point_crossover<Eigen::Map<gene_t>,
                                        Eigen::Map<const gene_t>>
       mc;
+}
+
+void initiate_mutators() noexcept {
+  using gene_t = Eigen::ArrayXd;
+  cyka::genetic::arithmetic_mutator<Eigen::Map<gene_t>,
+                                    Eigen::Map<const gene_t>>
+      am;
 }
