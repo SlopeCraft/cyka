@@ -134,7 +134,7 @@ class roulette_wheel : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand) const noexcept override {
+              std::mt19937 &rand) noexcept override {
     assert(expected_group_size <= fitness.size());
     Eigen::ArrayXd scores = fitness.maxCoeff() - fitness.transpose();
 
@@ -166,7 +166,7 @@ public:
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     const size_t pop_size_before = fitness.size();
     selected_count.setZero(fitness.size());
 
@@ -210,7 +210,7 @@ class monte_carlo : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand) const noexcept override {
+              std::mt19937 &rand) noexcept override {
     assert(expected_group_size <= fitness.size());
     Eigen::ArrayXd scores;
     scores.setOnes(fitness.size());
@@ -224,7 +224,7 @@ class truncation : public selector_base<1, detail::empty_option> {
 public:
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &) const noexcept override {
+              std::mt19937 &) noexcept override {
     selected_count.resize(fitness.size());
     selected_count.fill(0);
 
@@ -262,7 +262,7 @@ public:
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
 
     const size_t num_to_eliminate = fitness.size() - expected_group_size;
     const size_t pop_size_before = fitness.cols();
@@ -313,7 +313,7 @@ public:
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     assert(fitness.rows() == 1);
     assert(fitness.cols() >= expected_group_size);
     const size_t pop_size_before = fitness.cols();
@@ -370,7 +370,7 @@ public:
 
   void select(const fitness_matrix &fitness, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     assert(fitness.rows() == 1);
     assert(fitness.cols() >= expected_group_size);
     const size_t pop_size_before = fitness.cols();

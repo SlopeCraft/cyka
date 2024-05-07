@@ -26,11 +26,11 @@ public:
   virtual void select(const fitness_matrix &fitness_of_whole_group,
                       size_t expected_group_size,
                       Eigen::ArrayX<uint16_t> &select_count,
-                      std::mt19937 &rand_engine) const noexcept = 0;
+                      std::mt19937 &rand_engine) noexcept = 0;
 
   [[nodiscard]] Eigen::ArrayX<uint16_t>
   select(const fitness_matrix &fitness_of_whole_group,
-         size_t expected_group_size, std::mt19937 &rand_engine) const noexcept {
+         size_t expected_group_size, std::mt19937 &rand_engine) noexcept {
     Eigen::ArrayX<uint16_t> dest;
     this->select(fitness_of_whole_group, expected_group_size, dest,
                  rand_engine);
@@ -71,7 +71,7 @@ concept is_selector =
              const selector_t::fitness_matrix &fm,
              Eigen::ArrayX<uint16_t> &select_count, std::mt19937 &rand_engine,
              selector_t::select_option_type option) {
-      selector_const.select(fm, 0zu, select_count, rand_engine);
+      selector_mut.select(fm, 0zu, select_count, rand_engine);
       selector_const.select_option();
       selector_const.check_select_option(option);
       selector_mut.set_select_option(std::move(option));
