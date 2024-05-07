@@ -9,10 +9,22 @@
 #include <cyka/genetic/population_in_matrix.hpp>
 #include <cyka/genetic/population_in_vector.hpp>
 #include <cyka/genetic/single_object_selector.hpp>
+#include <cyka/genetic/solver_base.hpp>
 
 void initiate_SO_selectors() noexcept;
 void initiate_crossovers() noexcept;
 void initiate_mutators() noexcept;
+
+void initiate_GA_system() noexcept;
+
+class square : public cyka::genetic::GA_system_base<
+                   cyka::genetic::population_in_vector<Eigen::ArrayXf>, 1> {
+public:
+  [[nodiscard]] square::fitness_type
+  fitness_of(square::const_gene_view_type g) const noexcept final {
+    return g.matrix().squaredNorm();
+  }
+};
 
 int main() {
   //  Eigen::Array<float, 5, 20> mat;
@@ -81,3 +93,5 @@ void initiate_mutators() noexcept {
                                                Eigen::Map<const gene_t>>
       spdm;
 }
+
+void initiate_GA_system() noexcept { square s; }
