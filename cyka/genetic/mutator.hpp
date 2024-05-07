@@ -21,6 +21,8 @@ template <class mut_gene_view, class const_gene_view, class option_t>
 class mutator_base {
 public:
   using mutate_option_type = option_t;
+  using mut_gene_view_type = mut_gene_view;
+  using const_gene_view_type = const_gene_view;
 
 protected:
   mutate_option_type mutate_option_;
@@ -44,8 +46,23 @@ public:
   }
 
   virtual void mutate(const_gene_view parent, mut_gene_view child,
-                      std::mt19937 &rand_engine) const noexcept = 0;
+                      std::mt19937 &rand_engine) noexcept = 0;
 };
+
+template <class mutator_t>
+concept is_mutator =
+    requires(mutator_t &mut_m, const mutator_t &const_m,
+             mutator_t::mut_gene_view_type mut_g,
+             mutator_t::const_gene_view_type const_g,
+             mutator_t::mutate_option_type opt, std::mt19937 &rand) {
+      const_m.mutate_option();
+      mut_m.set_mutate_option(std::move(opt));
+      mut_m.mutate(const_g, mut_g, rand);
+    } and
+    std::is_base_of_v<mutator_base<typename mutator_t::mut_gene_view_type,
+                                   typename mutator_t::const_gene_view_type,
+                                   typename mutator_t::mutate_option_type>,
+                      mutator_t>;
 
 namespace detail {
 template <class eigen_vec_t>
@@ -157,9 +174,10 @@ public:
   }
 
   void mutate(const_gene_view parent, mut_gene_view child,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     detail::arithmetic_mutate(parent, child, rand_engine,
                               this->mutate_option());
+    static_assert(is_mutator<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -168,7 +186,7 @@ class single_point_arithmetic_mutator
     : public arithmetic_mutator<mut_gene_view, const_gene_view> {
 public:
   void mutate(const_gene_view parent, mut_gene_view child,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     detail::single_point_arithmetic_mutate(parent, child, rand_engine,
                                            this->mutate_option());
   }
@@ -182,7 +200,7 @@ class single_point_boolean_mutator
 
 public:
   void mutate(const_gene_view parent, mut_gene_view child,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     child = parent;
     std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
     const auto index = rand_idx(rand_engine);
@@ -208,7 +226,7 @@ public:
   }
 
   void mutate(const_gene_view parent, mut_gene_view child,
-              std::mt19937 &rand_engine) const noexcept override {
+              std::mt19937 &rand_engine) noexcept override {
     child = parent;
 
     std::uniform_real_distribution<float> rand_val{0, 1};

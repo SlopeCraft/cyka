@@ -104,7 +104,8 @@ public:
 } // namespace detail
 
 template <class GA_sys, class selector, class crossover, class mutator>
-  requires is_GA_system<GA_sys> and is_selector<selector>
+  requires is_GA_system<GA_sys> and is_selector<selector> and
+               is_crossover<crossover> and is_mutator<mutator>
 class solver_base : public detail::solver_base_impl<GA_sys>,
                     public selector,
                     public crossover,

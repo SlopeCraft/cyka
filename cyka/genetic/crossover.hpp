@@ -11,6 +11,7 @@
 #include <concepts>
 #include <iterator>
 #include <random>
+#include <type_traits>
 
 #include <Eigen/Dense>
 
@@ -29,8 +30,10 @@ public:
 
   virtual void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
                          mut_gene_view d,
-                         std::mt19937 &rand_engine) const noexcept = 0;
+                         std::mt19937 &rand_engine) noexcept = 0;
   using crossover_option_type = option_t;
+  using const_gene_view_type = const_gene_view;
+  using mut_gene_view_type = mut_gene_view;
 
 protected:
   crossover_option_type crossover_option_;
@@ -53,6 +56,22 @@ public:
     this->crossover_option_ = opt;
   }
 };
+
+template <class crossover_t>
+concept is_crossover =
+    requires(crossover_t &mut_c, const crossover_t &const_c,
+             crossover_t::mut_gene_view_type mut_g,
+             crossover_t::const_gene_view_type const_g,
+             crossover_t::crossover_option_type opt, std::mt19937 &rand) {
+      const_c.crossover_option();
+      mut_c.set_crossover_option(std::move(opt));
+      mut_c.crossover(const_g, const_g, mut_g, mut_g, rand);
+    } and
+    std::is_base_of_v<
+        crossover_base<typename crossover_t::mut_gene_view_type,
+                       typename crossover_t::const_gene_view_type,
+                       typename crossover_t::crossover_option_type>,
+        crossover_t>;
 
 namespace detail {
 
@@ -214,8 +233,10 @@ public:
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &) const noexcept override {
+                 mut_gene_view d, std::mt19937 &) noexcept override {
     detail::arithmetic_crossover(a, b, c, d, this->crossover_option().ratio);
+
+    static_assert(is_crossover<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -235,9 +256,10 @@ public:
   }
 
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) noexcept override {
     detail::uniform_crossover(a, b, c, d, mt,
                               this->crossover_option().swap_probability);
+    static_assert(is_crossover<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -247,12 +269,13 @@ class single_point_crossover
                             detail::empty_crossover_option> {
 public:
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) noexcept override {
     assert(a.size() == b.size());
     std::uniform_int_distribution<ptrdiff_t> rand_idx(1, a.size() - 2);
     const ptrdiff_t idx = rand_idx(mt);
     detail::single_point_crossover(a, b, c, d,
                                    std::clamp<ptrdiff_t>(idx, 0, a.size() - 1));
+    static_assert(is_crossover<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -266,11 +289,12 @@ class multi_point_crossover
                             multi_crossover_option> {
 public:
   void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                 mut_gene_view d, std::mt19937 &mt) const noexcept override {
+                 mut_gene_view d, std::mt19937 &mt) noexcept override {
     assert(a.size() == b.size());
 
     detail::multi_point_crossover(
         a, b, c, d, this->crossover_option().num_crossover_points, mt);
+    static_assert(is_crossover<std::decay_t<decltype(*this)>>);
   }
 };
 
