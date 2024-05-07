@@ -214,7 +214,7 @@ public:
     std::uniform_real_distribution<float> rand_val{0, 1};
     auto get_rand_idx = [&rand_val, &rand_engine](int len) -> int {
       assert(len >= 0);
-      const int ret = int(rand_val(rand_engine) * len);
+      const int ret = int(rand_val(rand_engine) * float(len));
       assert(ret < len or len == 0);
       return ret;
     };

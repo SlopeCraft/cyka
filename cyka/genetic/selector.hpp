@@ -17,8 +17,8 @@ namespace cyka::genetic {
 
 template <size_t n_obj, class option_t> class selector_base {
 public:
-  using fitness_type = fitness_computer<n_obj>::fitness_type;
-  using fitness_matrix = fitness_computer<n_obj>::fitness_matrix;
+  using fitness_type = fitness_value_type<n_obj>;
+  using fitness_matrix = fitness_matrix_type<n_obj>;
 
   virtual ~selector_base() = default;
 
