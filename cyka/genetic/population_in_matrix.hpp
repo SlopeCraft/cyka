@@ -197,8 +197,12 @@ public:
     this->gene_matrix = new_mat;
   }
 
-  void select(std::span<const uint16_t> LUT_is_selected) noexcept override {
+  std::vector<size_t>
+  select(std::span<const uint16_t> LUT_is_selected) noexcept override {
     assert(LUT_is_selected.size() == this->population_size());
+
+    std::vector<size_t> LUT_new_to_old;
+    LUT_new_to_old.reserve(this->population_size());
 
     const size_t left_pop_size = [&LUT_is_selected]() {
       size_t result = 0;
@@ -215,6 +219,7 @@ public:
     for (auto c_read = 0zu; c_read < this->gene_matrix.cols(); c_read++) {
       for (uint16_t i = 0; i < LUT_is_selected[c_read]; i++) {
         new_gene_mat.col(c_write) = this->gene_matrix.col(c_read);
+        LUT_new_to_old.emplace_back(c_read);
         c_write++;
       }
     }
@@ -222,6 +227,7 @@ public:
     this->gene_matrix = new_gene_mat;
 
     static_assert(is_population<population_in_matrix>);
+    return LUT_new_to_old;
   }
 };
 } // namespace cyka::genetic

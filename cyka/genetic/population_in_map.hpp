@@ -78,9 +78,12 @@ public:
     }
   }
 
-  void select(std::span<const uint16_t> LUT_selected_count) noexcept override {
+  std::vector<size_t>
+  select(std::span<const uint16_t> LUT_selected_count) noexcept override {
     assert(LUT_selected_count.size() == this->population_size());
 
+    std::vector<size_t> LUT_new_to_old;
+    LUT_new_to_old.reserve(this->population_size());
     std::map<size_t, gene> new_genes;
     size_t counter = 0;
     for (auto src_idx = 0zu; src_idx < this->population_size(); src_idx++) {
@@ -91,10 +94,12 @@ public:
       // N-1 genes
       for (auto i = 0zu; i + 1 < LUT_selected_count[src_idx]; i++) {
         new_genes.emplace(counter, this->gene_map.at(src_idx));
+        LUT_new_to_old.emplace_back(src_idx);
         counter++;
       }
       // Move the last
       new_genes.emplace(counter, std::move(this->gene_map.at(src_idx)));
+      LUT_new_to_old.emplace_back(src_idx);
       counter++;
     }
 
@@ -124,6 +129,7 @@ public:
     //    }
 
     static_assert(is_population<population_in_map>);
+    return LUT_new_to_old;
   }
 };
 } // namespace cyka::genetic

@@ -92,8 +92,8 @@ public:
     this->mutate(mutate_list, mutate_function);
   }
 
-  // selection
-  virtual void
+  /// selection, returns index LUT from new population to old population
+  virtual std::vector<size_t>
   select(std::span<const uint16_t> LUT_selected_count) noexcept = 0;
 };
 
