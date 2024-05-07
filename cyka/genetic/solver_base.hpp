@@ -6,6 +6,7 @@
 #define HEURISTICFLOWR_GA_H
 
 #include <cfloat>
+#include <limits>
 #include <random>
 #include <type_traits>
 
@@ -103,7 +104,7 @@ public:
 } // namespace detail
 
 template <class GA_sys, class selector, class crossover, class mutator>
-  requires is_GA_system<GA_sys>
+  requires is_GA_system<GA_sys> and is_selector<selector>
 class solver_base : public detail::solver_base_impl<GA_sys>,
                     public selector,
                     public crossover,
@@ -150,7 +151,7 @@ public:
     res.fitness_histroy.clear();
     res.fitness_histroy.reserve(this->GA_option().max_generations);
 
-    double prev_best_fitness = DBL_MAX;
+    double prev_best_fitness = std::numeric_limits<double>::max();
     size_t early_stop_counter = 0;
     std::vector<std::pair<size_t, size_t>> crossover_list;
     crossover_list.reserve(pop.pupulation_size() * 3);

@@ -94,4 +94,16 @@ void initiate_mutators() noexcept {
       spdm;
 }
 
-void initiate_GA_system() noexcept { square s; }
+void initiate_GA_system() noexcept {
+  square s;
+
+  using namespace cyka::genetic;
+  using SOGA =
+      single_object_GA<square, cyka::genetic::SO_selector::tournament,
+                       arithmetic_crossover<square::mut_gene_view_type,
+                                            square::const_gene_view_type>,
+                       arithmetic_mutator<square::mut_gene_view_type,
+                                          square::const_gene_view_type>>;
+
+  SOGA *p = nullptr;
+}

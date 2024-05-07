@@ -19,6 +19,7 @@ template <size_t n_obj, class option_t> class selector_base {
 public:
   using fitness_type = fitness_value_type<n_obj>;
   using fitness_matrix = fitness_matrix_type<n_obj>;
+  static constexpr size_t num_objectives_template_parameter = n_obj;
 
   virtual ~selector_base() = default;
 
@@ -59,6 +60,22 @@ public:
     this->select_option_ = opt;
   }
 };
+
+template <class selector_t>
+concept is_selector =
+    std::is_base_of_v<
+        selector_base<selector_t::num_objectives_template_parameter,
+                      typename selector_t::select_option_type>,
+        selector_t> and
+    requires(const selector_t &selector_const, selector_t &selector_mut,
+             const selector_t::fitness_matrix &fm,
+             Eigen::ArrayX<uint16_t> &select_count, std::mt19937 &rand_engine,
+             selector_t::select_option_type option) {
+      selector_const.select(fm, 0zu, select_count, rand_engine);
+      selector_const.select_option();
+      selector_const.check_select_option(option);
+      selector_mut.set_select_option(std::move(option));
+    };
 
 } // namespace cyka::genetic
 

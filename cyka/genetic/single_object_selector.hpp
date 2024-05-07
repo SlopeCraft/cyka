@@ -140,9 +140,11 @@ public:
 
     detail::select_genes_by_score(scores, selected_count,
                                   fitness.size() - expected_group_size, rand);
+
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 
-  std::optional<std::invalid_argument>
+  [[nodiscard]] std::optional<std::invalid_argument>
   check_select_option(const detail::empty_option &opt) const noexcept override {
     return std::nullopt;
   }
@@ -154,7 +156,7 @@ struct tournament_option {
 
 class tournament : public selector_base<1, tournament_option> {
 public:
-  std::optional<std::invalid_argument>
+  [[nodiscard]] std::optional<std::invalid_argument>
   check_select_option(const tournament_option &opt) const noexcept override {
     if (opt.tournament_size < 1) {
       return std::invalid_argument{"tournament size should be positive number"};
@@ -200,6 +202,7 @@ public:
     }
 
     assert(selected_count.sum() == expected_group_size);
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -213,6 +216,7 @@ public:
     scores.setOnes(fitness.size());
     detail::select_genes_by_score(scores, selected_count,
                                   fitness.size() - expected_group_size, rand);
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -228,6 +232,7 @@ public:
     for (size_t i = 0; i < expected_group_size; i++) {
       selected_count[ptrdiff_t(rank[i])] = 1;
     }
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -238,7 +243,7 @@ struct linear_rank_option {
 
 class linear_rank : public selector_base<1, linear_rank_option> {
 public:
-  std::optional<std::invalid_argument>
+  [[nodiscard]] std::optional<std::invalid_argument>
   check_select_option(const select_option_type &opt) const noexcept override {
     if (opt.worst_probability >= opt.best_probability) {
       return std::invalid_argument{
@@ -287,6 +292,7 @@ public:
 
     detail::select_ranked_genes(probability_score, rank, selected_count,
                                 num_to_eliminate, rand_engine);
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -296,7 +302,7 @@ struct exponential_rank_option {
 
 class exponential_rank : public selector_base<1, exponential_rank_option> {
 public:
-  std::optional<std::invalid_argument>
+  [[nodiscard]] std::optional<std::invalid_argument>
   check_select_option(const select_option_type &opt) const noexcept override {
     if (opt.exponential_base < 0 || opt.exponential_base >= 1) {
       return std::invalid_argument{"The base number for exponential rank "
@@ -336,6 +342,7 @@ public:
 
     detail::select_ranked_genes(probability, rank, selected_count,
                                 num_to_eliminate, rand_engine);
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
@@ -353,7 +360,7 @@ struct boltzmann_option {
  */
 class boltzmann : public selector_base<1, boltzmann_option> {
 public:
-  std::optional<std::invalid_argument>
+  [[nodiscard]] std::optional<std::invalid_argument>
   check_select_option(const select_option_type &opt) const noexcept override {
     if (opt.boltzmann_strength > 0) {
       return std::invalid_argument{"Boltzmann strength should be <=0"};
@@ -381,6 +388,7 @@ public:
 
     detail::select_genes_by_score(probability_score, selected_count,
                                   num_to_eliminate, rand_engine);
+    static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 } // namespace cyka::genetic::SO_selector
