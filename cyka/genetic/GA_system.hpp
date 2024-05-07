@@ -13,13 +13,24 @@ namespace cyka::genetic {
 /// developer should inherit and implement fitness function
 template <class population_t, size_t n_obj>
   requires is_population<population_t>
-class GA_system_base : public population_t, public fitness_computer<n_obj> {
+class GA_system_base
+    : public population_t,
+      public fitness_computer<n_obj,
+                              typename population_t::const_gene_view_type> {
 public:
   using population_type = population_t;
-  using fitness_computer_type = fitness_computer<n_obj>;
+  using fitness_computer_type =
+      fitness_computer<n_obj, typename population_t::const_gene_view_type>;
+
+  static constexpr size_t objective_num = n_obj;
 
   [[nodiscard]] size_t population_size() const noexcept final {
     return static_cast<const population_t *>(this)->population_size();
+  }
+
+  [[nodiscard]] population_t::const_gene_view_type
+  gene_at(size_t idx) const noexcept override {
+    return static_cast<const fitness_computer_type *>(this)->gene_at(idx);
   }
 };
 
@@ -52,9 +63,14 @@ public:
     this->fitness_fun = f;
   }
 
-  [[nodiscard]] fitness_type fitness_of(size_t index) const noexcept override {
-    return this->fitness_fun(this->gene_at(index));
+  [[nodiscard]] fitness_type fitness_of(const_gene_view_type g) const noexcept {
+    return this->fitness_fun(g);
   }
+
+  //  [[nodiscard]] fitness_type fitness_of(size_t index) const noexcept
+  //  override {
+  //    return this->fitness_fun(this->gene_at(index));
+  //  }
 };
 
 // template <class population_t>

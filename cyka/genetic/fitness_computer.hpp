@@ -47,23 +47,37 @@ public:
 };
 } // namespace detail
 
+template <size_t n_obj>
+using fitness_value_type = detail::fitness_computer_impl<n_obj>::fitness_type;
+
+template <size_t n_obj>
+using fitness_matrix_type =
+    Eigen::Array<double, n_obj == 0 ? Eigen::Dynamic : n_obj, Eigen::Dynamic>;
+
 template <class const_gene_view, class fitness>
 using fitness_function = fitness(const_gene_view);
 
-template <size_t n_obj>
+template <size_t n_obj, class const_gene_view>
 class fitness_computer : public detail::fitness_computer_impl<n_obj> {
 public:
   using base_t = detail::fitness_computer_impl<n_obj>;
   using fitness_type = base_t::fitness_type;
-  using fitness_matrix = Eigen::Array<double, n_obj, Eigen::Dynamic>;
+  using fitness_matrix = fitness_matrix_type<n_obj>;
 
   virtual ~fitness_computer() = default;
 
-  // compute fitness
-  [[nodiscard]] virtual fitness_type
-  fitness_of(size_t index) const noexcept = 0;
+  [[nodiscard]] virtual const_gene_view
+  gene_at(size_t index) const noexcept = 0;
 
-  virtual size_t population_size() const noexcept = 0;
+  [[nodiscard]] virtual fitness_type
+      fitness_of(const_gene_view) const noexcept = 0;
+
+  // compute fitness
+  [[nodiscard]] fitness_type fitness_of(size_t index) const noexcept {
+    return this->fitness_of(this->gene_at(index));
+  }
+
+  [[nodiscard]] virtual size_t population_size() const noexcept = 0;
 
   virtual void fitness_of_all(fitness_matrix &result) const noexcept {
     result.setZero(this->num_objectives(), this->population_size());
