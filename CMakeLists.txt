@@ -13,4 +13,6 @@ target_link_libraries(cyka INTERFACE Eigen3::Eigen)
 target_compile_features(cyka INTERFACE cxx_std_23)
 target_precompile_headers(cyka INTERFACE $<BUILD_INTERFACE:${headers}>)
 
+add_library(cyka::cyka ALIAS cyka)
+
 add_subdirectory(test)

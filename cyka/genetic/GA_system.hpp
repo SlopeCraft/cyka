@@ -25,12 +25,12 @@ public:
   static constexpr size_t objective_num = n_obj;
 
   [[nodiscard]] size_t population_size() const noexcept final {
-    return static_cast<const population_t *>(this)->population_size();
+    return population_t::population_size();
   }
 
   [[nodiscard]] population_t::const_gene_view_type
   gene_at(size_t idx) const noexcept override {
-    return static_cast<const fitness_computer_type *>(this)->gene_at(idx);
+    return population_t::gene_at(idx);
   }
 
   //  [[nodiscard]] GA_system_base::fitness_matrix

@@ -136,11 +136,46 @@ public:
 protected:
   virtual void make_crossover_list(
       solver_base::population_type &pop, const GA_sys::fitness_matrix &,
-      std::vector<std::pair<size_t, size_t>> &crossover_list) = 0;
+                      std::vector<std::pair<size_t, size_t>> &crossover_list) {
+    std::uniform_real_distribution<double> rand{0, 1};
+    std::vector<size_t> queue;
+    queue.reserve(pop.population_size());
+    for (auto i = 0zu; i < pop.population_size(); i++) {
+      if (rand(this->random_engine()) >=
+          this->GA_option().crossover_probability) {
+        queue.emplace_back(i);
+      }
+    }
+
+    std::shuffle(queue.begin(), queue.end(), this->random_engine());
+    if (queue.size() % 2 == 1) {
+      queue.pop_back();
+    }
+    assert(queue.size() % 2 == 0);
+
+    crossover_list.clear();
+    crossover_list.reserve(queue.size() / 2);
+
+    for (auto idx = 0zu; idx < queue.size(); idx += 2) {
+      const auto j = idx + 1;
+      assert(j < queue.size());
+      crossover_list.emplace_back(idx, j);
+    }
+  }
 
   virtual void make_mutate_list(solver_base::population_type &pop,
                                 const GA_sys::fitness_matrix &,
-                                std::vector<size_t> &mutate_list) = 0;
+                                std::vector<size_t> &mutate_list) {
+    mutate_list.clear();
+    mutate_list.reserve(pop.population_size());
+    std::uniform_real_distribution<double> rand{0, 1};
+
+    for (auto idx = 0zu; idx < pop.population_size(); idx++) {
+      if (rand(this->random_engine()) >= this->GA_option().mutate_probability) {
+        mutate_list.emplace_back(idx);
+      }
+    }
+  }
 };
 
 template <class GA_sys, class selector, class crossover, class mutator>
@@ -152,10 +187,14 @@ public:
                             mutator &&m)
       : solver_base<GA_sys, selector, crossover, mutator>{
             rand_seed, std::move(s), std::move(c), std::move(m)} {}
-  single_object_GA()
-      : single_object_GA{0, selector{}, crossover{}, mutator{}} {};
+  explicit single_object_GA(uint32_t rand_seed)
+      : single_object_GA{rand_seed, selector{}, crossover{}, mutator{}} {};
 
-  [[nodiscard]] single_object_GA::result_type
+  single_object_GA() : single_object_GA{0} {}
+
+  using typename solver_base<GA_sys, selector, crossover, mutator>::result_type;
+
+  [[nodiscard]] result_type
   optimize(single_object_GA::GA_system_type &pop) override {
     typename single_object_GA::result_type res;
     res.fitness_history.clear();
@@ -237,48 +276,7 @@ public:
   }
 
 protected:
-  void make_crossover_list(
-      single_object_GA::population_type &pop, const GA_sys::fitness_matrix &,
-      std::vector<std::pair<size_t, size_t>> &crossover_list) override {
-    std::uniform_real_distribution<double> rand{0, 1};
-    std::vector<size_t> queue;
-    queue.reserve(pop.population_size());
-    for (auto i = 0zu; i < pop.population_size(); i++) {
-      if (rand(this->random_engine()) >=
-          this->GA_option().crossover_probability) {
-        queue.emplace_back(i);
-      }
-    }
 
-    std::shuffle(queue.begin(), queue.end(), this->random_engine());
-    if (queue.size() % 2 == 1) {
-      queue.pop_back();
-    }
-    assert(queue.size() % 2 == 0);
-
-    crossover_list.clear();
-    crossover_list.reserve(queue.size() / 2);
-
-    for (auto idx = 0zu; idx < queue.size(); idx += 2) {
-      const auto j = idx + 1;
-      assert(j < queue.size());
-      crossover_list.emplace_back(idx, j);
-    }
-  }
-
-  void make_mutate_list(single_object_GA::population_type &pop,
-                        const GA_sys::fitness_matrix &,
-                        std::vector<size_t> &mutate_list) override {
-    mutate_list.clear();
-    mutate_list.reserve(pop.population_size());
-    std::uniform_real_distribution<double> rand{0, 1};
-
-    for (auto idx = 0zu; idx < pop.population_size(); idx++) {
-      if (rand(this->random_engine()) >= this->GA_option().mutate_probability) {
-        mutate_list.emplace_back(idx);
-      }
-    }
-  }
 };
 
 } // namespace cyka::genetic

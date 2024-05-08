@@ -11,6 +11,8 @@
 #include <cyka/genetic/single_object_selector.hpp>
 #include <cyka/genetic/solver_base.hpp>
 
+#include <iostream>
+
 void initiate_SO_selectors() noexcept;
 void initiate_crossovers() noexcept;
 void initiate_mutators() noexcept;
@@ -48,6 +50,7 @@ int main() {
   initiate_SO_selectors();
   initiate_crossovers();
   initiate_mutators();
+  initiate_GA_system();
 }
 
 void initiate_SO_selectors() noexcept {
@@ -99,11 +102,42 @@ void initiate_GA_system() noexcept {
 
   using namespace cyka::genetic;
   using SOGA =
-      single_object_GA<square, cyka::genetic::SO_selector::tournament,
+      single_object_GA<square, cyka::genetic::SO_selector::truncation,
                        arithmetic_crossover<square::mut_gene_view_type,
                                             square::const_gene_view_type>,
                        arithmetic_mutator<square::mut_gene_view_type,
                                           square::const_gene_view_type>>;
 
   SOGA solver;
+  const size_t dims = 20;
+
+  solver.set_GA_option(GA_option{
+      .population_size = 200,
+  });
+  {
+    SOGA::mutate_option_type opt;
+    opt.lower_bound.setConstant(dims, -std::numeric_limits<float>::infinity());
+    opt.upper_bound.setConstant(dims, std::numeric_limits<float>::infinity());
+    opt.step_max.setConstant(dims, 1.0);
+    solver.set_mutate_option(std::move(opt));
+  }
+
+  std::normal_distribution<float> rand{10, 20};
+  s.reset(solver.GA_option().population_size,
+          [&solver, &rand](Eigen::ArrayXf &f) {
+            f.resize(dims);
+            for (float &val : f) {
+              val = rand(solver.random_engine());
+            }
+          });
+
+  auto result = solver.optimize(s);
+
+  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
+    auto &pair = result.fitness_history[gen];
+
+    std::cout << "Generation " << gen << ", best fitness = "
+              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
+              << "\n";
+  }
 }
