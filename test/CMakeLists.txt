@@ -7,6 +7,8 @@ function(cyka_add_test src_name)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
-cyka_add_test(compiler_features.cpp)
-cyka_add_test(initiate.cpp)
-cyka_add_test(crossovers.cpp)
+file(GLOB sources "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+
+foreach (src_file ${sources})
+    cyka_add_test(${src_file})
+endforeach ()
