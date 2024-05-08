@@ -131,13 +131,13 @@ void initiate_GA_system() noexcept {
             }
           });
 
-  auto result = solver.optimize(s);
-
-  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
-    auto &pair = result.fitness_history[gen];
-
-    std::cout << "Generation " << gen << ", best fitness = "
-              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
-              << "\n";
-  }
+  //  auto result = solver.optimize(s);
+  //
+  //  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
+  //    auto &pair = result.fitness_history[gen];
+  //
+  //    std::cout << "Generation " << gen << ", best fitness = "
+  //              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
+  //              << "\n";
+  //  }
 }

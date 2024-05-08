@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.25)
 project(cyka VERSION 0.0 LANGUAGES C CXX)
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${PROJECT_SOURCE_DIR})
-    option(CYKA_INSTALL "Install this library" ON)
+    option(CYKA_INSTALL "Install cyka" ON)
 else ()
-    option(CYKA_INSTALL "Install this library" OFF)
+    option(CYKA_INSTALL "Install cyka" OFF)
 endif ()
+
+option(CYKA_INCLUDE_TESTS "Build test files" ON)
 
 message(STATUS "CYKA_INSTALL = ${CYKA_INSTALL}")
 
@@ -23,7 +25,10 @@ target_precompile_headers(cyka INTERFACE $<BUILD_INTERFACE:${headers}>)
 
 add_library(cyka::cyka ALIAS cyka)
 
-add_subdirectory(test)
+if (${CYKA_INCLUDE_TESTS})
+    enable_testing()
+    add_subdirectory(test)
+endif ()
 
 if (${CYKA_INSTALL})
     include(cmake/install.cmake)
