@@ -26,7 +26,7 @@ jobs:
       - name: ls -l ad msvc include dir
         shell: cmd
         run: | 
-          cd /d C:\PROGRA~1\MICROS~2\2022\ENTERP~1\VC\Tools\MSVC\1438~1.331
+          cd /d C:\PROGRA~1\MICROS~2\2022\ENTERP~1\VC\Tools\MSVC\1438~1.331\include
           ls -l
 
 #      - name: Tree at msvc installation prefix
