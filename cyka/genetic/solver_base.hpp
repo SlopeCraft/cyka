@@ -192,7 +192,7 @@ public:
   explicit single_object_GA(uint32_t rand_seed)
       : single_object_GA{rand_seed, selector{}, crossover{}, mutator{}} {};
 
-  single_object_GA() : single_object_GA{0} {}
+  single_object_GA() : single_object_GA{10} {}
 
   using typename solver_base<GA_sys, selector, crossover, mutator>::result_type;
 

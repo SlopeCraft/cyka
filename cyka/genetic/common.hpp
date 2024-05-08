@@ -17,4 +17,12 @@ inline constexpr std::size_t operator"" zu(unsigned long long const value) {
 }
 #endif
 
+namespace cyka {
+
+inline constexpr std::ptrdiff_t
+operator"" _isize(unsigned long long const val) {
+  return static_cast<std::ptrdiff_t>(val);
+}
+} // namespace cyka
+
 #endif // CYKA_COMMON_HPP

@@ -107,7 +107,7 @@ void uniform_crossover(const const_gene_view &p1, const const_gene_view &p2,
   c1.resize(p1.size());
   c2.resize(p1.size());
 
-  std::uniform_real_distribution<float> rand(0, 1);
+  std::uniform_real_distribution<float> rand{0, 1};
   for (ptrdiff_t i = 0; i < p1.size(); i++) {
     const float r = rand(rand_engine);
     const bool swap = r <= probability;
