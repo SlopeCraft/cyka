@@ -1,9 +1,17 @@
 cmake_minimum_required(VERSION 3.25)
 project(cyka VERSION 0.0 LANGUAGES C CXX)
 
+if (${CMAKE_SOURCE_DIR} STREQUAL ${PROJECT_SOURCE_DIR})
+    option(CYKA_INSTALL "Install this library" ON)
+else ()
+    option(CYKA_INSTALL "Install this library" OFF)
+endif ()
+
+message(STATUS "CYKA_INSTALL = ${CYKA_INSTALL}")
+
 find_package(Eigen3 3.4.0 REQUIRED)
 
-file(GLOB_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.h;${CMAKE_CURRENT_SOURCE_DIR}/*.hpp" headers)
+file(GLOB_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/cyka/*.h;${CMAKE_CURRENT_SOURCE_DIR}/cyka/*.hpp" headers)
 
 add_library(cyka INTERFACE)
 target_include_directories(cyka INTERFACE
@@ -16,3 +24,7 @@ target_precompile_headers(cyka INTERFACE $<BUILD_INTERFACE:${headers}>)
 add_library(cyka::cyka ALIAS cyka)
 
 add_subdirectory(test)
+
+if (${CYKA_INSTALL})
+    include(cmake/install.cmake)
+endif ()
