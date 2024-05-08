@@ -32,6 +32,13 @@ public:
   gene_at(size_t idx) const noexcept override {
     return static_cast<const fitness_computer_type *>(this)->gene_at(idx);
   }
+
+  //  [[nodiscard]] GA_system_base::fitness_matrix
+  //  fitness_of_all() const noexcept override {
+  //    return fitness_computer<
+  //        n_obj, typename
+  //        population_t::const_gene_view_type>::fitness_of_all();
+  //  }
 };
 
 template <class GA_sys>
@@ -45,6 +52,7 @@ class GA_system : public GA_system_base<population_t, n_obj> {
 public:
   using base_t = GA_system_base<population_t, n_obj>;
   using typename base_t::const_gene_view_type;
+  using typename base_t::fitness_matrix;
   using typename base_t::fitness_type;
 
   using fitness_fun_t =

@@ -24,8 +24,9 @@ struct empty_crossover_option {};
 template <class mut_gene_view, class const_gene_view, class option_t>
 class crossover_base {
 public:
-  static_assert(std::is_same_v<typename mut_gene_view::value_type,
-                               typename const_gene_view::value_type>);
+  static_assert(
+      std::is_same_v<typename std::decay_t<mut_gene_view>::value_type,
+                     typename std::decay_t<const_gene_view>::value_type>);
   virtual ~crossover_base() = default;
 
   virtual void crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
@@ -217,9 +218,10 @@ template <class mut_gene_view, class const_gene_view>
 class arithmetic_crossover
     : public crossover_base<
           mut_gene_view, const_gene_view,
-          arithmetic_crossover_option<typename mut_gene_view::value_type>> {
+                            arithmetic_crossover_option<typename std::decay_t<
+                                mut_gene_view>::value_type>> {
 public:
-  using float_type = mut_gene_view::value_type;
+  using float_type = std::decay_t<mut_gene_view>::value_type;
   static_assert(std::is_floating_point_v<float_type>);
 
   [[nodiscard]] std::optional<std::invalid_argument>

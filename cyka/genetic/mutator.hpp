@@ -161,12 +161,14 @@ template <class mut_gene_view, class const_gene_view>
 class arithmetic_mutator
     : public mutator_base<
           mut_gene_view, const_gene_view,
-          arithmetic_mutate_option<typename mut_gene_view::value_type>> {
+                          arithmetic_mutate_option<typename std::decay_t<
+                              mut_gene_view>::value_type>> {
 public:
-  static_assert(std::is_same_v<typename mut_gene_view::value_type,
-                               typename const_gene_view::value_type>);
+  static_assert(
+      std::is_same_v<typename std::decay_t<mut_gene_view>::value_type,
+                     typename std::decay_t<const_gene_view>::value_type>);
 
-  using float_type = mut_gene_view::value_type;
+  using float_type = std::decay_t<mut_gene_view>::value_type;
   std::optional<std::invalid_argument> check_mutate_option(
       const arithmetic_mutate_option<float_type> &opt) const noexcept override {
     return detail::check_bound_and_step(opt.lower_bound, opt.upper_bound,

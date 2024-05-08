@@ -9,6 +9,7 @@
 #include <limits>
 #include <random>
 #include <type_traits>
+#include <utility>
 
 #include "GA_result.hpp"
 #include "GA_system.hpp"
@@ -67,8 +68,9 @@ template <class GA_sys>
   requires is_GA_system<GA_sys>
 class solver_base_impl {
 public:
-  using typename GA_sys::gene_type;
-  using typename GA_sys::population_type;
+  using gene_type = GA_sys::gene_type;
+  using population_type = GA_sys::population_type;
+  using GA_system_type = GA_sys;
 
   //  static_assert(
   //      std::is_base_of_v<selector_base<GA_sys::objective_num,
@@ -80,8 +82,10 @@ public:
   //  const_gene_view>;
 
   explicit solver_base_impl(uint32_t rand_seed) : rand_engine{rand_seed} {}
-  explicit solver_base_impl(std::random_device &rd) : rand_engine{rd()} {}
-  solver_base_impl() : solver_base_impl(std::random_device{}){};
+  solver_base_impl() = delete;
+  //  explicit solver_base_impl(std::random_device &rd) : rand_engine{rd()} {}
+  //  solver_base_impl() : solver_base_impl(std::random_device{}()){};
+  virtual ~solver_base_impl() = default;
 
   [[nodiscard]] struct GA_option &GA_option() noexcept {
     return this->GA_option_;
@@ -111,8 +115,6 @@ class solver_base : public detail::solver_base_impl<GA_sys>,
                     public crossover,
                     public mutator {
 public:
-  using typename GA_sys::gene_type;
-  using typename GA_sys::population_type;
   using result_type =
       GA_result<typename GA_sys::fitness_type, typename GA_sys::fitness_matrix>;
 
@@ -121,19 +123,23 @@ public:
                                       typename selector::select_option_type>,
                         selector>);
 
-  explicit solver_base(selector &&s, crossover &&c, mutator &&m)
-      : solver_base{detail::solver_base_impl<GA_sys>{}, s, c, m} {}
+  explicit solver_base(uint32_t rand_seed, selector &&s, crossover &&c,
+                       mutator &&m)
+      : detail::solver_base_impl<GA_sys>{rand_seed}, selector{s}, crossover{c},
+        mutator{m} {}
 
   solver_base() = delete;
 
-  [[nodiscard]] virtual result_type optimize(population_type &pop) = 0;
+  [[nodiscard]] virtual result_type
+  optimize(solver_base::GA_system_type &pop) = 0;
 
 protected:
   virtual void make_crossover_list(
-      const GA_sys::fitness_matrix &,
+      solver_base::population_type &pop, const GA_sys::fitness_matrix &,
       std::vector<std::pair<size_t, size_t>> &crossover_list) = 0;
 
-  virtual void make_mutate_list(const GA_sys::fitness_matrix &,
+  virtual void make_mutate_list(solver_base::population_type &pop,
+                                const GA_sys::fitness_matrix &,
                                 std::vector<size_t> &mutate_list) = 0;
 };
 
@@ -142,22 +148,25 @@ template <class GA_sys, class selector, class crossover, class mutator>
 class single_object_GA
     : public solver_base<GA_sys, selector, crossover, mutator> {
 public:
-  explicit single_object_GA(selector &&s, crossover &&c, mutator &&m)
-      : single_object_GA{detail::solver_base_impl<GA_sys>{}, s, c, m} {}
-  single_object_GA() : single_object_GA{selector{}, crossover{}, mutator{}} {};
+  explicit single_object_GA(uint32_t rand_seed, selector &&s, crossover &&c,
+                            mutator &&m)
+      : solver_base<GA_sys, selector, crossover, mutator>{
+            rand_seed, std::move(s), std::move(c), std::move(m)} {}
+  single_object_GA()
+      : single_object_GA{0, selector{}, crossover{}, mutator{}} {};
 
   [[nodiscard]] single_object_GA::result_type
-  optimize(single_object_GA::population_type &pop) {
+  optimize(single_object_GA::GA_system_type &pop) override {
     typename single_object_GA::result_type res;
-    res.fitness_histroy.clear();
-    res.fitness_histroy.reserve(this->GA_option().max_generations);
+    res.fitness_history.clear();
+    res.fitness_history.reserve(this->GA_option().max_generations);
 
     double prev_best_fitness = std::numeric_limits<double>::max();
     size_t early_stop_counter = 0;
     std::vector<std::pair<size_t, size_t>> crossover_list;
-    crossover_list.reserve(pop.pupulation_size() * 3);
+    crossover_list.reserve(pop.population_size() * 3);
     std::vector<size_t> mutate_list;
-    mutate_list.reserve(pop.pupulation_size() * 3);
+    mutate_list.reserve(pop.population_size() * 3);
 
     size_t generations = 0;
     //    Eigen::ArrayX<uint16_t> selected_count;
@@ -165,12 +174,11 @@ public:
       // compute fitness
       const Eigen::Array<double, 1, Eigen::Dynamic> fitness_before_selection =
           pop.fitness_of_all();
-      //      Eigen::Array<double, 1, Eigen::Dynamic> fitness_after_selection;
-      // selection
       {
-        const Eigen::ArrayX<uint16_t> selected_count =
-            this->select(fitness_before_selection,
-                         this->GA_option().population_size, this->rand_engine);
+        Eigen::ArrayX<uint16_t> selected_count;
+        this->select(fitness_before_selection,
+                     this->GA_option().population_size, selected_count,
+                     this->rand_engine);
 
         const std::vector<size_t> index_LUT_new_2_old =
             pop.select(std::span<const uint16_t>{
@@ -179,10 +187,11 @@ public:
 
         Eigen::Array<double, 1, Eigen::Dynamic> fitness_after_selection =
             fitness_before_selection(index_LUT_new_2_old);
-        res.fitness_histroy.emplace_back(std::move(fitness_after_selection));
+        res.fitness_history.emplace_back(std::move(fitness_after_selection));
       }
 
-      const auto &fitness_after_selection = res.fitness_histroy.back();
+      const auto &fitness_after_selection =
+          res.fitness_history.back().population_fitness;
 
       // find the best gene, decide whether to stop
       {
@@ -205,20 +214,19 @@ public:
         }
       }
 
-      this->make_crossover_list(fitness_after_selection, crossover_list);
-      this->make_mutate_list(fitness_after_selection, mutate_list);
+      this->make_crossover_list(pop, fitness_after_selection, crossover_list);
+      this->make_mutate_list(pop, fitness_after_selection, mutate_list);
 
       auto crossover_fun =
           [this](GA_sys::const_gene_view_type p1,
                  GA_sys::const_gene_view_type p2, GA_sys::mut_gene_view_type c1,
-                 GA_sys::mut_gene_view_type c2, std::mt19937 &rand_engine) {
-            this->crossover(p1, p2, c1, c2, rand_engine);
-          };
+                                  GA_sys::mut_gene_view_type c2) {
+        this->crossover(p1, p2, c1, c2, this->random_engine());
+      };
 
       auto mutate_fun = [this](GA_sys::const_gene_view_type p,
-                               GA_sys::mut_gene_view_type c,
-                               std::mt19937 &rand_engine) {
-        this->mutate(p, c, rand_engine);
+                               GA_sys::mut_gene_view_type c) {
+        this->mutate(p, c, this->random_engine());
       };
 
       pop.crossover_and_mutate(crossover_list, crossover_fun, mutate_list,
@@ -226,6 +234,50 @@ public:
     }
 
     return res;
+  }
+
+protected:
+  void make_crossover_list(
+      single_object_GA::population_type &pop, const GA_sys::fitness_matrix &,
+      std::vector<std::pair<size_t, size_t>> &crossover_list) override {
+    std::uniform_real_distribution<double> rand{0, 1};
+    std::vector<size_t> queue;
+    queue.reserve(pop.population_size());
+    for (auto i = 0zu; i < pop.population_size(); i++) {
+      if (rand(this->random_engine()) >=
+          this->GA_option().crossover_probability) {
+        queue.emplace_back(i);
+      }
+    }
+
+    std::shuffle(queue.begin(), queue.end(), this->random_engine());
+    if (queue.size() % 2 == 1) {
+      queue.pop_back();
+    }
+    assert(queue.size() % 2 == 0);
+
+    crossover_list.clear();
+    crossover_list.reserve(queue.size() / 2);
+
+    for (auto idx = 0zu; idx < queue.size(); idx += 2) {
+      const auto j = idx + 1;
+      assert(j < queue.size());
+      crossover_list.emplace_back(idx, j);
+    }
+  }
+
+  void make_mutate_list(single_object_GA::population_type &pop,
+                        const GA_sys::fitness_matrix &,
+                        std::vector<size_t> &mutate_list) override {
+    mutate_list.clear();
+    mutate_list.reserve(pop.population_size());
+    std::uniform_real_distribution<double> rand{0, 1};
+
+    for (auto idx = 0zu; idx < pop.population_size(); idx++) {
+      if (rand(this->random_engine()) >= this->GA_option().mutate_probability) {
+        mutate_list.emplace_back(idx);
+      }
+    }
   }
 };
 

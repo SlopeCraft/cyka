@@ -105,5 +105,5 @@ void initiate_GA_system() noexcept {
                        arithmetic_mutator<square::mut_gene_view_type,
                                           square::const_gene_view_type>>;
 
-  SOGA *p = nullptr;
+  SOGA solver;
 }
