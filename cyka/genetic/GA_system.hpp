@@ -43,7 +43,10 @@ public:
 
 template <class GA_sys>
 concept is_GA_system =
-    std::is_base_of_v<typename GA_sys::population_type, GA_sys> and
+    requires() {
+      typename GA_sys::fitness_type;
+      typename GA_sys::fitness_matrix_type;
+    } and std::is_base_of_v<typename GA_sys::population_type, GA_sys> and
     std::is_base_of_v<typename GA_sys::fitness_computer_type, GA_sys>;
 
 /// GA system with changeable fitness function
@@ -52,7 +55,7 @@ class GA_system : public GA_system_base<population_t, n_obj> {
 public:
   using base_t = GA_system_base<population_t, n_obj>;
   using typename base_t::const_gene_view_type;
-  using typename base_t::fitness_matrix;
+  using typename base_t::fitness_matrix_type;
   using typename base_t::fitness_type;
 
   using fitness_fun_t =

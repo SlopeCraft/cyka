@@ -13,6 +13,7 @@
 
 #include "GA_result.hpp"
 #include "GA_system.hpp"
+#include "common.hpp"
 #include "crossover.hpp"
 #include "fitness_computer.hpp"
 #include "mutator.hpp"
@@ -115,8 +116,8 @@ class solver_base : public detail::solver_base_impl<GA_sys>,
                     public crossover,
                     public mutator {
 public:
-  using result_type =
-      GA_result<typename GA_sys::fitness_type, typename GA_sys::fitness_matrix>;
+  using result_type = GA_result<typename GA_sys::fitness_type,
+                                typename GA_sys::fitness_matrix_type>;
 
   static_assert(
       std::is_base_of_v<selector_base<GA_sys::objective_num,
@@ -134,8 +135,9 @@ public:
   optimize(solver_base::GA_system_type &pop) = 0;
 
 protected:
-  virtual void make_crossover_list(
-      solver_base::population_type &pop, const GA_sys::fitness_matrix &,
+  virtual void
+  make_crossover_list(solver_base::population_type &pop,
+                      const typename GA_sys::fitness_matrix_type &,
                       std::vector<std::pair<size_t, size_t>> &crossover_list) {
     std::uniform_real_distribution<double> rand{0, 1};
     std::vector<size_t> queue;
@@ -164,7 +166,7 @@ protected:
   }
 
   virtual void make_mutate_list(solver_base::population_type &pop,
-                                const GA_sys::fitness_matrix &,
+                                const typename GA_sys::fitness_matrix_type &,
                                 std::vector<size_t> &mutate_list) {
     mutate_list.clear();
     mutate_list.reserve(pop.population_size());

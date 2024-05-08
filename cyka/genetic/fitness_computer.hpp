@@ -62,7 +62,7 @@ class fitness_computer : public detail::fitness_computer_impl<n_obj> {
 public:
   using base_t = detail::fitness_computer_impl<n_obj>;
   using fitness_type = base_t::fitness_type;
-  using fitness_matrix = fitness_matrix_type<n_obj>;
+  using fitness_matrix_type = fitness_matrix_type<n_obj>;
 
   virtual ~fitness_computer() = default;
 
@@ -79,7 +79,7 @@ public:
 
   [[nodiscard]] virtual size_t population_size() const noexcept = 0;
 
-  virtual void fitness_of_all(fitness_matrix &result) const noexcept {
+  virtual void fitness_of_all(fitness_matrix_type &result) const noexcept {
     result.setZero(this->num_objectives(), this->population_size());
     for (size_t idx = 0; idx < this->population_size(); idx++) {
       if constexpr (n_obj == 1) {
@@ -90,8 +90,8 @@ public:
     }
   }
 
-  [[nodiscard]] virtual fitness_matrix fitness_of_all() const noexcept {
-    fitness_matrix result;
+  [[nodiscard]] virtual fitness_matrix_type fitness_of_all() const noexcept {
+    fitness_matrix_type result;
     this->fitness_of_all(result);
     return result;
   }
