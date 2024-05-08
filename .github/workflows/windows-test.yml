@@ -29,6 +29,14 @@ jobs:
           mkdir build
           mkdir install
           "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" & cmake -S . -B ./build -G Ninja -DCMAKE_C_COMPILER:FILEPATH=${{matrix.compiler}} -DCMAKE_CXX_COMPILER:FILEPATH=${{matrix.compiler}} -DCMAKE_PREFIX_PATH:PATH=C:/vcpkg/installed/x64-windows -DCMAKE_INSTALL_PREFIX:PATH=install -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+
+      - name: Upload build dir
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyka-dev-build-dir-${{ matrix.build_type }}
+          path: build
+          if-no-files-found: error
+
       - name: Build
         shell: cmd
         run: cmake --build ./build --parallel
