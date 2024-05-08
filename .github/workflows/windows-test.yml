@@ -23,6 +23,12 @@ jobs:
           choco install ninja
           vcpkg install --triplet=x64-windows eigen3
 
+      - name: Tree at msvc installation prefix
+        run: tree C:\PROGRA~1\MICROS~2\2022\ENTERP~1\VC\Tools\MSVC\1438~1.331
+
+      - name: Tree at windows kit installation prefix
+        run: tree "C:\Program Files (x86)\Windows Kits\10"
+
       - name: Configure
         shell: cmd
         run: |
@@ -33,7 +39,7 @@ jobs:
       - name: Upload build dir
         uses: actions/upload-artifact@v4
         with:
-          name: cyka-dev-build-dir-${{ matrix.build_type }}
+          name: cyka-dev-build-dir-${{ matrix.compiler }}
           path: build
           if-no-files-found: error
 
