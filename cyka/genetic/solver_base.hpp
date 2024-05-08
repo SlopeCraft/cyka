@@ -132,11 +132,11 @@ public:
   solver_base() = delete;
 
   [[nodiscard]] virtual result_type
-  optimize(solver_base::GA_system_type &pop) = 0;
+  optimize(typename solver_base::GA_system_type &pop) = 0;
 
 protected:
   virtual void
-  make_crossover_list(solver_base::population_type &pop,
+  make_crossover_list(typename solver_base::population_type &pop,
                       const typename GA_sys::fitness_matrix_type &,
                       std::vector<std::pair<size_t, size_t>> &crossover_list) {
     std::uniform_real_distribution<double> rand{0, 1};
@@ -165,7 +165,7 @@ protected:
     }
   }
 
-  virtual void make_mutate_list(solver_base::population_type &pop,
+  virtual void make_mutate_list(typename solver_base::population_type &pop,
                                 const typename GA_sys::fitness_matrix_type &,
                                 std::vector<size_t> &mutate_list) {
     mutate_list.clear();
@@ -197,7 +197,7 @@ public:
   using typename solver_base<GA_sys, selector, crossover, mutator>::result_type;
 
   [[nodiscard]] result_type
-  optimize(single_object_GA::GA_system_type &pop) override {
+  optimize(typename single_object_GA::GA_system_type &pop) override {
     typename single_object_GA::result_type res;
     res.fitness_history.clear();
     res.fitness_history.reserve(this->GA_option().max_generations);

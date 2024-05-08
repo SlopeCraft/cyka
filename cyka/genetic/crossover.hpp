@@ -171,7 +171,8 @@ void multi_point_crossover(const const_gene_view &p1, const const_gene_view &p2,
 
     ptrdiff_t &operator*() noexcept { return this->cur; }
 
-    sampler_it &operator++() noexcept {
+  protected:
+    void add() noexcept {
       assert(cur < this->p1->size());
       assert(cur >= prev);
       const ptrdiff_t len = cur - prev;
@@ -187,8 +188,18 @@ void multi_point_crossover(const const_gene_view &p1, const const_gene_view &p2,
       this->swap = not this->swap;
       this->prev = this->cur;
       this->cur = -1;
+    }
 
+  public:
+    sampler_it &operator++() noexcept {
+      this->add();
       return *this;
+    }
+
+    sampler_it operator++(int) noexcept {
+      sampler_it ret{*this};
+      // this->add();
+      return ret;
     }
   };
 
@@ -204,8 +215,17 @@ void multi_point_crossover(const const_gene_view &p1, const const_gene_view &p2,
       this->idx++;
       return *this;
     }
-    bool operator!=(index_it b) const noexcept {
+    const index_it operator++(int) noexcept {
+      index_it ret{*this};
+      this->idx++;
+      return ret;
+    }
+    [[nodiscard]] bool operator!=(index_it b) const noexcept {
       return this->idx not_eq b.idx;
+    }
+
+    [[nodiscard]] bool operator==(index_it b) const noexcept {
+      return not this->operator!=(b);
     }
   };
 
