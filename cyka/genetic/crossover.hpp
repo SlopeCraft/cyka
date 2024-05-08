@@ -15,6 +15,8 @@
 
 #include <Eigen/Dense>
 
+#include "common.hpp"
+
 namespace cyka::genetic {
 
 namespace detail {
@@ -84,18 +86,21 @@ namespace detail {
 //                           Eigen::Map<Eigen::Array<float_t, dim, 1>> d,
 //                           float_t ratio) noexcept {
 template <class mut_gene_view, class const_gene_view>
-void arithmetic_crossover(const_gene_view a, const_gene_view b, mut_gene_view c,
-                          mut_gene_view d, float_t ratio) noexcept {
+void arithmetic_crossover(const const_gene_view &a, const const_gene_view &b,
+                          mut_gene_view &c, mut_gene_view &d,
+                          float_t ratio) noexcept {
+  assert(a.rows() > 0);
   assert(a.rows() == b.rows());
   c = ratio * a + (1.0 - ratio) * b;
   d = ratio * b + (1.0 - ratio) * a;
+  assert(c.size() == a.size());
   assert(c.size() == d.size());
 }
 
 template <class mut_gene_view, class const_gene_view>
-void uniform_crossover(const_gene_view p1, const_gene_view p2, mut_gene_view c1,
-                       mut_gene_view c2, std::mt19937 &rand_engine,
-                       float probability) noexcept {
+void uniform_crossover(const const_gene_view &p1, const const_gene_view &p2,
+                       mut_gene_view &c1, mut_gene_view &c2,
+                       std::mt19937 &rand_engine, float probability) noexcept {
   assert(probability >= 0);
   assert(probability <= 1);
   assert(p1.size() == p2.size());
@@ -117,9 +122,9 @@ void uniform_crossover(const_gene_view p1, const_gene_view p2, mut_gene_view c1,
 }
 
 template <class mut_gene_view, class const_gene_view>
-void single_point_crossover(const_gene_view p1, const_gene_view p2,
-                            mut_gene_view c1, mut_gene_view c2,
-                            size_t point_index) noexcept {
+void single_point_crossover(const const_gene_view &p1,
+                            const const_gene_view &p2, mut_gene_view &c1,
+                            mut_gene_view &c2, size_t point_index) noexcept {
   assert(p1.size() == p2.size());
   assert(point_index >= 0);
   assert(point_index < p1.size());
@@ -138,8 +143,8 @@ void single_point_crossover(const_gene_view p1, const_gene_view p2,
 }
 
 template <class mut_gene_view, class const_gene_view>
-void multi_point_crossover(const_gene_view p1, const_gene_view p2,
-                           mut_gene_view c1, mut_gene_view c2,
+void multi_point_crossover(const const_gene_view &p1, const const_gene_view &p2,
+                           mut_gene_view &c1, mut_gene_view &c2,
                            size_t num_points, std::mt19937 &rand) noexcept {
   assert(p1.size() == p2.size());
   c1.resize(p1.size());
@@ -156,12 +161,12 @@ void multi_point_crossover(const_gene_view p1, const_gene_view p2,
     ptrdiff_t prev{0};
     ptrdiff_t cur{-1};
     bool swap{true};
-    const_gene_view *p1;
-    const_gene_view *p2;
+    const const_gene_view *p1;
+    const const_gene_view *p2;
     mut_gene_view *c1;
     mut_gene_view *c2;
-    sampler_it(const_gene_view *p1, const_gene_view *p2, mut_gene_view *c1,
-               mut_gene_view *c2)
+    sampler_it(const const_gene_view *p1, const const_gene_view *p2,
+               mut_gene_view *c1, mut_gene_view *c2)
         : p1{p1}, p2{p2}, c1{c1}, c2{c2} {};
 
     ptrdiff_t &operator*() noexcept { return this->cur; }
