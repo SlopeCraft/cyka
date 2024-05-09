@@ -15,7 +15,9 @@
 
 #include <Eigen/Dense>
 
-#include "common.hpp"
+#include "../utils/callback_fake_container.hpp"
+#include "../utils/number_iterator.hpp"
+#include "../utils/size_t_literal.hpp"
 
 namespace cyka::genetic {
 
@@ -150,87 +152,29 @@ void multi_point_crossover(const const_gene_view &p1, const const_gene_view &p2,
   c1.resize(p1.size());
   c2.resize(p1.size());
 
-  // iterator to receive
-  struct sampler_it {
-    using iterator_category = std::output_iterator_tag;
-
-    using value_type = ptrdiff_t;
-    using difference_type = ptrdiff_t;
-    using pointer = ptrdiff_t *;
-    using reference = ptrdiff_t &;
-    ptrdiff_t prev{0};
-    ptrdiff_t cur{-1};
-    bool swap{true};
-    const const_gene_view *p1;
-    const const_gene_view *p2;
-    mut_gene_view *c1;
-    mut_gene_view *c2;
-    sampler_it(const const_gene_view *p1, const const_gene_view *p2,
-               mut_gene_view *c1, mut_gene_view *c2)
-        : p1{p1}, p2{p2}, c1{c1}, c2{c2} {};
-
-    ptrdiff_t &operator*() noexcept { return this->cur; }
-
-  protected:
-    void add() noexcept {
-      assert(cur < this->p1->size());
-      assert(cur >= prev);
-      const ptrdiff_t len = cur - prev;
-      auto src1 = p1->segment(prev, len);
-      auto src2 = p2->segment(prev, len);
-      if (swap) {
-        c1->segment(prev, len) = src2;
-        c2->segment(prev, len) = src1;
-      } else {
-        c1->segment(prev, len) = src1;
-        c2->segment(prev, len) = src2;
-      }
-      this->swap = not this->swap;
-      this->prev = this->cur;
-      this->cur = -1;
+  bool swap = false;
+  ptrdiff_t prev{0};
+  auto callback = [&p1, &p2, &c1, &c2, &swap, &prev](ptrdiff_t cur) {
+    assert(cur < p1.size());
+    assert(cur >= prev);
+    const ptrdiff_t len = cur - prev;
+    auto src1 = p1.segment(prev, len);
+    auto src2 = p2.segment(prev, len);
+    if (swap) {
+      c1.segment(prev, len) = src2;
+      c2.segment(prev, len) = src1;
+    } else {
+      c1.segment(prev, len) = src1;
+      c2.segment(prev, len) = src2;
     }
-
-  public:
-    sampler_it &operator++() noexcept {
-      this->add();
-      return *this;
-    }
-
-    sampler_it operator++(int) noexcept {
-      sampler_it ret{*this};
-      // this->add();
-      return ret;
-    }
+    swap = not swap;
+    prev = cur;
   };
-
-  struct index_it {
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = ptrdiff_t;
-    using difference_type = ptrdiff_t;
-    using pointer = ptrdiff_t *;
-    using reference = ptrdiff_t &;
-    ptrdiff_t idx;
-    ptrdiff_t &operator*() noexcept { return this->idx; }
-    index_it &operator++() noexcept {
-      this->idx++;
-      return *this;
-    }
-    const index_it operator++(int) noexcept {
-      index_it ret{*this};
-      this->idx++;
-      return ret;
-    }
-    [[nodiscard]] bool operator!=(index_it b) const noexcept {
-      return this->idx not_eq b.idx;
-    }
-
-    [[nodiscard]] bool operator==(index_it b) const noexcept {
-      return not this->operator!=(b);
-    }
-  };
-
-  std::sample(index_it{.idx = 0}, index_it{.idx = p1.size()},
-              sampler_it{&p1, &p2, &c1, &c2}, num_points, rand);
+  cyka::utils::callback_fake_container<decltype(callback), ptrdiff_t>
+      fake_container{callback};
+  std::sample(cyka::utils::number_iterator<ptrdiff_t>{0},
+              cyka::utils::number_iterator<ptrdiff_t>{p1.size()},
+              std::back_inserter(fake_container), num_points, rand);
 }
 
 } // namespace detail

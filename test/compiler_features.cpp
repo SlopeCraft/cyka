@@ -1,6 +1,6 @@
+#include "cyka/utils/size_t_literal.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <cyka/genetic/common.hpp>
 
 int main(int, char **) {
   const auto size_literal = 0uz + 0zu;

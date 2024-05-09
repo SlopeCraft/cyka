@@ -2,8 +2,8 @@
 // Created by Joseph on 2024/5/8.
 //
 
-#ifndef CYKA_COMMON_HPP
-#define CYKA_COMMON_HPP
+#ifndef CYKA_SIZE_T_LITERAL_HPP
+#define CYKA_SIZE_T_LITERAL_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -25,4 +25,4 @@ operator"" _isize(unsigned long long const val) {
 }
 } // namespace cyka
 
-#endif // CYKA_COMMON_HPP
+#endif // CYKA_SIZE_T_LITERAL_HPP

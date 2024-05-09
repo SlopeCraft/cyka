@@ -13,8 +13,8 @@
 
 #include "GA_result.hpp"
 #include "GA_system.hpp"
-#include "common.hpp"
 #include "crossover.hpp"
+#include "cyka/utils/size_t_literal.hpp"
 #include "fitness_computer.hpp"
 #include "mutator.hpp"
 #include "population_base.hpp"
