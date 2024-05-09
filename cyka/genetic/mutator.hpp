@@ -45,7 +45,7 @@ public:
     this->mutate_option_ = opt;
   }
 
-  virtual void mutate(const_gene_view parent, mut_gene_view child,
+  virtual void mutate(const const_gene_view &parent, mut_gene_view &child,
                       std::mt19937 &rand_engine) noexcept = 0;
 };
 
@@ -123,14 +123,16 @@ namespace detail {
 
 template <class mut_gene_view, class const_gene_view>
 void arithmetic_mutate(
-    const_gene_view parent, mut_gene_view child, std::mt19937 &rand_engine,
-    const arithmetic_mutate_option<typename mut_gene_view::value_type>
-        &opt) noexcept {
+    const const_gene_view &parent, mut_gene_view &child,
+    std::mt19937 &rand_engine,
+    const arithmetic_mutate_option<
+        typename std::decay_t<mut_gene_view>::value_type> &opt) noexcept {
   assert(parent.size() == opt.lower_bound.size());
 
   child.resize(parent.size());
-  std::uniform_real_distribution<typename mut_gene_view::value_type> rand{-1.0,
-                                                                          1.0};
+  std::uniform_real_distribution<
+      typename std::decay_t<mut_gene_view>::value_type>
+      rand{-1.0, 1.0};
   for (auto &f : child) {
     f = rand(rand_engine);
   }
@@ -138,17 +140,23 @@ void arithmetic_mutate(
   auto new_val_before_clamp = r_times_step + parent;
   auto new_val = new_val_before_clamp.max(opt.lower_bound).min(opt.upper_bound);
   child = new_val;
+  assert(child.size() == parent.size());
 }
 
 template <class mut_gene_view, class const_gene_view>
 void single_point_arithmetic_mutate(
-    const_gene_view parent, mut_gene_view child, std::mt19937 &rand_engine,
-    const arithmetic_mutate_option<typename mut_gene_view::value_type>
-        &opt) noexcept {
+    const const_gene_view &parent, mut_gene_view &child,
+    std::mt19937 &rand_engine,
+    const arithmetic_mutate_option<
+        typename std::decay_t<mut_gene_view>::value_type> &opt) noexcept {
   child = parent;
-  std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
-  std::uniform_real_distribution<typename mut_gene_view::value_type> rand_f{-1,
-                                                                            1};
+  std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size() - 1};
+  std::uniform_real_distribution<
+      typename std::decay_t<mut_gene_view>::value_type>
+      rand_f{-1, 1};
+  if (child.size() != parent.size()) {
+    child.resize(parent.size());
+  }
   const ptrdiff_t idx = rand_idx(rand_engine);
   child[idx] += rand_f(rand_engine) * opt.step_max[idx];
 
@@ -175,10 +183,11 @@ public:
                                         opt.step_max);
   }
 
-  void mutate(const_gene_view parent, mut_gene_view child,
+  void mutate(const const_gene_view &parent, mut_gene_view &child,
               std::mt19937 &rand_engine) noexcept override {
     detail::arithmetic_mutate(parent, child, rand_engine,
                               this->mutate_option());
+    assert(child.size() == parent.size());
     static_assert(is_mutator<std::decay_t<decltype(*this)>>);
   }
 };
@@ -187,7 +196,7 @@ template <class mut_gene_view, class const_gene_view>
 class single_point_arithmetic_mutator
     : public arithmetic_mutator<mut_gene_view, const_gene_view> {
 public:
-  void mutate(const_gene_view parent, mut_gene_view child,
+  void mutate(const const_gene_view &parent, mut_gene_view &child,
               std::mt19937 &rand_engine) noexcept override {
     detail::single_point_arithmetic_mutate(parent, child, rand_engine,
                                            this->mutate_option());
@@ -198,13 +207,17 @@ template <class mut_gene_view, class const_gene_view>
 class single_point_boolean_mutator
     : public mutator_base<mut_gene_view, const_gene_view,
                           detail::empty_mutate_option> {
-  static_assert(std::is_same_v<typename mut_gene_view::value_type, bool>);
+  static_assert(
+      std::is_same_v<typename std::decay_t<mut_gene_view>::value_type, bool>);
 
 public:
-  void mutate(const_gene_view parent, mut_gene_view child,
+  void mutate(const const_gene_view &parent, mut_gene_view &child,
               std::mt19937 &rand_engine) noexcept override {
     child = parent;
-    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
+    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size() - 1};
+    if (child.size() != parent.size()) {
+      child.resize(parent.size());
+    }
     const auto index = rand_idx(rand_engine);
     child[index] = not child[index];
   }
@@ -219,15 +232,16 @@ template <class mut_gene_view, class const_gene_view>
 class single_point_discrete_mutator
     : public mutator_base<
           mut_gene_view, const_gene_view,
-          discrete_mutate_option<typename mut_gene_view::value_type>> {
+                          discrete_mutate_option<typename std::decay_t<
+                              mut_gene_view>::value_type>> {
 public:
-  using scalar_type = mut_gene_view::value_type;
+  using scalar_type = std::decay_t<mut_gene_view>::value_type;
   [[nodiscard]] std::optional<std::invalid_argument> check_mutate_option(
       const discrete_mutate_option<scalar_type> &opt) const noexcept override {
     return detail::check_lb_ub(opt.lower_bound, opt.upper_bound);
   }
 
-  void mutate(const_gene_view parent, mut_gene_view child,
+  void mutate(const const_gene_view &parent, mut_gene_view &child,
               std::mt19937 &rand_engine) noexcept override {
     child = parent;
 
@@ -239,21 +253,21 @@ public:
       return ret;
     };
 
-    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size()};
+    std::uniform_int_distribution<ptrdiff_t> rand_idx{0, parent.size() - 1};
     const auto index = rand_idx(rand_engine);
 
     const scalar_type old_val = child[index];
 
     const scalar_type lb = this->mutate_option().lower_bound[index];
-    const scalar_type ub = this->mutate_option().lower_bound[index];
+    const scalar_type ub = this->mutate_option().upper_bound[index];
 
     const scalar_type r = get_rand_idx(int(ub - lb) - 1);
     scalar_type new_val = scalar_type(r + lb);
     assert(new_val < ub);
-    if (new_val >= r) {
+    if (new_val >= old_val) {
       new_val += 1;
     }
-    assert(lb <= new_val and new_val <= lb);
+    assert(lb <= new_val and new_val <= ub);
 
     child[index] = new_val;
   }

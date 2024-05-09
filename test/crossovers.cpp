@@ -9,21 +9,27 @@ int main(int, char **) {
   using mxf_mut = Eigen::Map<Eigen::ArrayXf>;
   using mxf_const = Eigen::Map<const Eigen::ArrayXf>;
 
-  constexpr size_t dim = 5;
-  const Eigen::ArrayXf p1 = Eigen::ArrayXf::LinSpaced(dim, 0.0, 4.0);
-  const Eigen::ArrayXf p2 = Eigen::ArrayXf::LinSpaced(dim, 5.0, 9.0);
+  constexpr size_t dim = 30;
+  const Eigen::ArrayXf p1 = Eigen::ArrayXf::LinSpaced(dim, 0.0, float(dim - 1));
+  const Eigen::ArrayXf p2 =
+      Eigen::ArrayXf::LinSpaced(dim, float(dim), float(2 * dim - 1));
   assert(p1.size() == dim);
 
   std::mt19937 rand{std::random_device{}()};
 
   Eigen::ArrayXf c1, c2;
   auto print_value = [dim, &p1, &p2](const char *name, auto c1, auto c2) {
-    Eigen::Array<float, Eigen::Dynamic, 4> temp{dim, 4};
-    temp.col(0) = p1;
-    temp.col(1) = p2;
-    temp.col(2) = c1;
-    temp.col(3) = c2;
-    std::cout << name << " crossover: \n" << temp << std::endl;
+    std::cout << "\n\n" << name << " crossover: ";
+    std::cout << "\np1 = " << p1.transpose();
+    std::cout << "\np2 = " << p2.transpose();
+    std::cout << "\nc1 = " << c1.transpose();
+    std::cout << "\nc2 = " << c2.transpose();
+    //    Eigen::Array<float, Eigen::Dynamic, 4> temp{dim, 4};
+    //    temp.col(0) = p1;
+    //    temp.col(1) = p2;
+    //    temp.col(2) = c1;
+    //    temp.col(3) = c2;
+    //    std::cout << name << " crossover: \n" << temp << std::endl;
   };
   {
     cg::arithmetic_crossover<vxf &, const vxf &> c;
@@ -68,6 +74,8 @@ int main(int, char **) {
   }
   {
     cg::multi_point_crossover<mxf_mut, mxf_const> c;
+    c.set_crossover_option(
+        decltype(c)::crossover_option_type{.num_crossover_points = 3});
     c.crossover(p1m, p2m, c1m, c2m, rand);
     print_value("[map] multi point", c1, c2);
   }
