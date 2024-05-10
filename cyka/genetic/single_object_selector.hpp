@@ -5,9 +5,11 @@
 #ifndef CYKA_SINGLE_OBJECT_SELECTOR_HPP
 #define CYKA_SINGLE_OBJECT_SELECTOR_HPP
 
-#include "selector.hpp"
 #include <algorithm>
 #include <map>
+
+#include "../utils/number_iterator.hpp"
+#include "selector.hpp"
 
 namespace cyka::genetic::SO_selector {
 
@@ -170,23 +172,22 @@ public:
     const size_t pop_size_before = fitness.size();
     selected_count.setZero(fitness.size());
 
-    std::uniform_int_distribution<size_t> rand_index{0, pop_size_before - 1};
-
-    auto choose_tournament = [this, &rand_index,
+    auto choose_tournament = [this, pop_size_before,
                               &rand_engine](std::vector<size_t> &src_indices) {
       src_indices.clear();
       src_indices.reserve(this->select_option().tournament_size);
-      for (auto i = 0zu; i < this->select_option().tournament_size; i++) {
-        const auto src_idx = rand_index(rand_engine);
-        src_indices.emplace_back(src_idx);
-      }
+      std::sample(cyka::utils::number_iterator<size_t>(0),
+                  cyka::utils::number_iterator<size_t>(pop_size_before),
+                  std::back_inserter(src_indices),
+                  this->select_option().tournament_size, rand_engine);
     };
     std::vector<size_t> tournament;
     Eigen::ArrayXd tournament_fitness;
     for (auto num_selected = 0zu; num_selected < expected_group_size;
          num_selected++) {
       choose_tournament(tournament);
-      assert(tournament.size() == this->select_option().tournament_size);
+      //      assert(tournament.size() ==
+      //      this->select_option().tournament_size);
       tournament_fitness.setZero((ptrdiff_t)tournament.size());
       for (ptrdiff_t tournament_idx = 0; tournament_idx < tournament.size();
            tournament_idx++) {

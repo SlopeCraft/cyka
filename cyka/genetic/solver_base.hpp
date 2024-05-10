@@ -239,12 +239,12 @@ public:
         ptrdiff_t best_gene_index = -1;
         const double cur_best_fitness =
             fitness_after_selection.maxCoeff(&best_gene_index);
-        if (cur_best_fitness < prev_best_fitness) {
+        if (cur_best_fitness >= prev_best_fitness) {
           early_stop_counter++;
         } else {
           early_stop_counter = 0;
         }
-        prev_best_fitness = cur_best_fitness;
+        prev_best_fitness = std::min(prev_best_fitness, cur_best_fitness);
 
         if (generations >= this->GA_option().max_generations) {
           break;

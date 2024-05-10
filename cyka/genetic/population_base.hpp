@@ -23,11 +23,13 @@ namespace cyka::genetic {
 
 
 template <class const_gene_view, class mut_gene_view>
-using crossover_function = void(const_gene_view a, const_gene_view b,
-                                mut_gene_view c, mut_gene_view d);
+using crossover_function = void(const const_gene_view &parent1,
+                                const const_gene_view &parent2,
+                                mut_gene_view &child1, mut_gene_view &child2);
 
 template <class const_gene_view, class mut_gene_view>
-using mutate_function = void(const_gene_view src, mut_gene_view dest);
+using mutate_function = void(const const_gene_view &parent,
+                             mut_gene_view &child);
 
 namespace detail {
 class population_common_base {
@@ -61,13 +63,12 @@ public:
   [[nodiscard]] virtual const_gene_view
   gene_at(size_t index) const noexcept = 0;
 
-  virtual void set_gene_at(size_t index, const_gene_view g) noexcept = 0;
+  virtual void set_gene_at(size_t index, const const_gene_view &g) noexcept = 0;
 
   // reset
   virtual void
   reset(size_t num_population,
-        const std::function<void(mut_gene_view)> &init_function) noexcept = 0;
-
+        const std::function<void(mut_gene_view &)> &init_function) noexcept = 0;
 
   // crossover
   virtual void crossover(

@@ -78,12 +78,13 @@ public:
     return wrap_col(this->gene_matrix, idx);
   }
 
-  void set_gene_at(size_t index, const_gene_view_type g) noexcept override {
+  void set_gene_at(size_t index,
+                   const const_gene_view_type &g) noexcept override {
     this->gene_matrix.col(index) = g;
   }
 
   void reset(size_t num_population,
-             const std::function<void(mut_gene_view_type)>
+             const std::function<void(mut_gene_view_type &)>
                  &init_function) noexcept override {
     assert(num_population > 0);
     if constexpr (n_features <= 0) { // dynamic features
@@ -94,11 +95,13 @@ public:
       gene_matrix.col(0) = std::move(g);
     } else { // fixed features
       this->gene_matrix.setZero(n_features, num_population);
-      init_function(wrap_col(this->gene_matrix, 0));
+      auto col = wrap_col(this->gene_matrix, 0);
+      init_function(col);
     }
 
     for (size_t c = 1; c < num_population; c++) {
-      init_function(wrap_col(this->gene_matrix, c));
+      auto col = wrap_col(this->gene_matrix, c);
+      init_function(col);
     }
   }
 
@@ -122,10 +125,13 @@ public:
       assert(bidx < size_before);
       assert(next_new_gene_idx >= size_before);
       assert(next_new_gene_idx + 1 < size_after);
-      crossover_function(wrap_col_const(new_mat, aidx),
-                         wrap_col_const(new_mat, bidx),
-                         wrap_col(new_mat, next_new_gene_idx),
-                         wrap_col(new_mat, next_new_gene_idx + 1));
+      {
+        auto p1 = wrap_col_const(new_mat, aidx);
+        auto p2 = wrap_col_const(new_mat, bidx);
+        auto c1 = wrap_col(new_mat, next_new_gene_idx);
+        auto c2 = wrap_col(new_mat, next_new_gene_idx + 1);
+        crossover_function(p1, p2, c1, c2);
+      }
       next_new_gene_idx += 2;
     }
     this->gene_matrix = new_mat;
@@ -146,8 +152,9 @@ public:
       assert(srcidx < size_before);
       assert(next_new_gene_idx >= size_before);
       assert(next_new_gene_idx < size_after);
-      mutate_function(wrap_col_const(new_mat, srcidx),
-                      wrap_col(new_mat, next_new_gene_idx));
+      auto p = wrap_col_const(new_mat, srcidx);
+      auto c = wrap_col(new_mat, next_new_gene_idx);
+      mutate_function(p, c);
       next_new_gene_idx++;
     }
     this->gene_matrix = new_mat;
@@ -178,10 +185,13 @@ public:
       assert(bidx < size_before);
       assert(next_new_gene_idx >= size_before);
       assert(next_new_gene_idx + 1 < size_after);
-      crossover_function(wrap_col_const(new_mat, aidx),
-                         wrap_col_const(new_mat, bidx),
-                         wrap_col(new_mat, next_new_gene_idx),
-                         wrap_col(new_mat, next_new_gene_idx + 1));
+      {
+        auto p1 = wrap_col_const(new_mat, aidx);
+        auto p2 = wrap_col_const(new_mat, bidx);
+        auto c1 = wrap_col(new_mat, next_new_gene_idx);
+        auto c2 = wrap_col(new_mat, next_new_gene_idx + 1);
+        crossover_function(p1, p2, c1, c2);
+      }
       next_new_gene_idx += 2;
     }
     // mutate
@@ -189,8 +199,9 @@ public:
       assert(srcidx < size_before);
       assert(next_new_gene_idx >= size_before);
       assert(next_new_gene_idx < size_after);
-      mutate_function(wrap_col_const(new_mat, srcidx),
-                      wrap_col(new_mat, next_new_gene_idx));
+      auto p = wrap_col_const(new_mat, srcidx);
+      auto c = wrap_col(new_mat, next_new_gene_idx);
+      mutate_function(p, c);
       next_new_gene_idx++;
     }
 

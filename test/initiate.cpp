@@ -98,7 +98,7 @@ void initiate_mutators() noexcept {
 }
 
 void initiate_GA_system() noexcept {
-  square s;
+  square sys;
 
   using namespace cyka::genetic;
   using SOGA =
@@ -108,36 +108,38 @@ void initiate_GA_system() noexcept {
                        arithmetic_mutator<square::mut_gene_view_type,
                                           square::const_gene_view_type>>;
 
-  SOGA solver;
-  const size_t dims = 20;
+  SOGA solver{10};
+  const size_t dims = 60;
 
-  solver.set_GA_option(GA_option{
-      .population_size = 200,
-  });
+  solver.set_GA_option(GA_option{.population_size = 400,
+                                 .max_generations = 1000,
+                                 .mutate_probability = 0.1});
   {
     SOGA::mutate_option_type opt;
     opt.lower_bound.setConstant(dims, -std::numeric_limits<float>::infinity());
     opt.upper_bound.setConstant(dims, std::numeric_limits<float>::infinity());
-    opt.step_max.setConstant(dims, 1.0);
+    opt.step_max.setConstant(dims, 0.5);
     solver.set_mutate_option(std::move(opt));
   }
+  {
+    std::normal_distribution<float> rand{10, 20};
+    sys.reset(solver.GA_option().population_size,
+              [&solver, &rand](Eigen::ArrayXf &f) {
+                f.resize(dims);
+                for (float &val : f) {
+                  val = rand(solver.random_engine());
+                }
+              });
+  }
+  solver.set_crossover_option(SOGA::crossover_option_type{.ratio = 0.4});
 
-  std::normal_distribution<float> rand{10, 20};
-  s.reset(solver.GA_option().population_size,
-          [&solver, &rand](Eigen::ArrayXf &f) {
-            f.resize(dims);
-            for (float &val : f) {
-              val = rand(solver.random_engine());
-            }
-          });
+  auto result = solver.optimize(sys);
 
-  //  auto result = solver.optimize(s);
-  //
-  //  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
-  //    auto &pair = result.fitness_history[gen];
-  //
-  //    std::cout << "Generation " << gen << ", best fitness = "
-  //              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
-  //              << "\n";
-  //  }
+  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
+    auto &pair = result.fitness_history[gen];
+
+    std::cout << "Generation " << gen << ", best fitness = "
+              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
+              << "\n";
+  }
 }
