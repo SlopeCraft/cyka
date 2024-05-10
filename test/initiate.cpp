@@ -22,8 +22,8 @@ void initiate_GA_system() noexcept;
 class square : public cyka::genetic::GA_system_base<
                    cyka::genetic::population_in_vector<Eigen::ArrayXf>, 1> {
 public:
-  [[nodiscard]] square::fitness_type
-  fitness_of(square::const_gene_view_type g) const noexcept final {
+  [[nodiscard]] square::loss_type
+  loss_of(square::const_gene_view_type g) const noexcept final {
     return g.matrix().squaredNorm();
   }
 };
@@ -135,11 +135,11 @@ void initiate_GA_system() noexcept {
 
   auto result = solver.optimize(sys);
 
-  for (auto gen = 0zu; gen < result.fitness_history.size(); gen++) {
-    auto &pair = result.fitness_history[gen];
+  for (auto gen = 0zu; gen < result.loss_history.size(); gen++) {
+    auto &pair = result.loss_history[gen];
 
-    std::cout << "Generation " << gen << ", best fitness = "
-              << pair.population_fitness[ptrdiff_t(pair.best_gene_index)]
+    std::cout << "Generation " << gen << ", best loss = "
+              << pair.population_loss[ptrdiff_t(pair.best_gene_index)]
               << "\n";
   }
 }

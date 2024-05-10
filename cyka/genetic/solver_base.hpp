@@ -15,7 +15,7 @@
 #include "GA_system.hpp"
 #include "crossover.hpp"
 #include "cyka/utils/size_t_literal.hpp"
-#include "fitness_computer.hpp"
+#include "loss_computer.hpp"
 #include "mutator.hpp"
 #include "population_base.hpp"
 #include "selector.hpp"
@@ -116,8 +116,8 @@ class solver_base : public detail::solver_base_impl<GA_sys>,
                     public crossover,
                     public mutator {
 public:
-  using result_type = GA_result<typename GA_sys::fitness_type,
-                                typename GA_sys::fitness_matrix_type>;
+  using result_type = GA_result<typename GA_sys::loss_type,
+                                typename GA_sys::loss_matrix_type>;
 
   static_assert(
       std::is_base_of_v<selector_base<GA_sys::objective_num,
@@ -137,7 +137,7 @@ public:
 protected:
   virtual void
   make_crossover_list(typename solver_base::population_type &pop,
-                      const typename GA_sys::fitness_matrix_type &,
+                      const typename GA_sys::loss_matrix_type &,
                       std::vector<std::pair<size_t, size_t>> &crossover_list) {
     std::uniform_real_distribution<double> rand{0, 1};
     std::vector<size_t> queue;
@@ -166,7 +166,7 @@ protected:
   }
 
   virtual void make_mutate_list(typename solver_base::population_type &pop,
-                                const typename GA_sys::fitness_matrix_type &,
+                                const typename GA_sys::loss_matrix_type &,
                                 std::vector<size_t> &mutate_list) {
     mutate_list.clear();
     mutate_list.reserve(pop.population_size());
@@ -199,10 +199,10 @@ public:
   [[nodiscard]] result_type
   optimize(typename single_object_GA::GA_system_type &pop) override {
     typename single_object_GA::result_type res;
-    res.fitness_history.clear();
-    res.fitness_history.reserve(this->GA_option().max_generations);
+    res.loss_history.clear();
+    res.loss_history.reserve(this->GA_option().max_generations);
 
-    double prev_best_fitness = std::numeric_limits<double>::max();
+    double prev_best_loss = std::numeric_limits<double>::max();
     size_t early_stop_counter = 0;
     std::vector<std::pair<size_t, size_t>> crossover_list;
     crossover_list.reserve(pop.population_size() * 3);
@@ -212,12 +212,12 @@ public:
     size_t generations = 0;
     //    Eigen::ArrayX<uint16_t> selected_count;
     while (true) {
-      // compute fitness
-      const Eigen::Array<double, 1, Eigen::Dynamic> fitness_before_selection =
-          pop.fitness_of_all();
+      // compute loss
+      const Eigen::Array<double, 1, Eigen::Dynamic> loss_before_selection =
+          pop.loss_of_all();
       {
         Eigen::ArrayX<uint16_t> selected_count;
-        this->select(fitness_before_selection,
+        this->select(loss_before_selection,
                      this->GA_option().population_size, selected_count,
                      this->rand_engine);
 
@@ -226,25 +226,25 @@ public:
                 selected_count.data(), size_t(selected_count.size())});
         assert(index_LUT_new_2_old.size() == this->GA_option().population_size);
 
-        Eigen::Array<double, 1, Eigen::Dynamic> fitness_after_selection =
-            fitness_before_selection(index_LUT_new_2_old);
-        res.fitness_history.emplace_back(std::move(fitness_after_selection));
+        Eigen::Array<double, 1, Eigen::Dynamic> loss_after_selection =
+            loss_before_selection(index_LUT_new_2_old);
+        res.loss_history.emplace_back(std::move(loss_after_selection));
       }
 
-      const auto &fitness_after_selection =
-          res.fitness_history.back().population_fitness;
+      const auto &loss_after_selection =
+          res.loss_history.back().population_loss;
 
       // find the best gene, decide whether to stop
       {
         ptrdiff_t best_gene_index = -1;
-        const double cur_best_fitness =
-            fitness_after_selection.maxCoeff(&best_gene_index);
-        if (cur_best_fitness >= prev_best_fitness) {
+        const double cur_best_loss =
+            loss_after_selection.maxCoeff(&best_gene_index);
+        if (cur_best_loss >= prev_best_loss) {
           early_stop_counter++;
         } else {
           early_stop_counter = 0;
         }
-        prev_best_fitness = std::min(prev_best_fitness, cur_best_fitness);
+        prev_best_loss = std::min(prev_best_loss, cur_best_loss);
 
         if (generations >= this->GA_option().max_generations) {
           break;
@@ -255,8 +255,8 @@ public:
         }
       }
 
-      this->make_crossover_list(pop, fitness_after_selection, crossover_list);
-      this->make_mutate_list(pop, fitness_after_selection, mutate_list);
+      this->make_crossover_list(pop, loss_after_selection, crossover_list);
+      this->make_mutate_list(pop, loss_after_selection, mutate_list);
 
       auto crossover_fun =
           [this](GA_sys::const_gene_view_type p1,

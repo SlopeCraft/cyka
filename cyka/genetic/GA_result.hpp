@@ -10,18 +10,18 @@
 
 #include <Eigen/Dense>
 
-#include "fitness_computer.hpp"
+#include "loss_computer.hpp"
 
 namespace cyka::genetic {
 
-template <class fitness_type, class fitness_matrix> struct GA_result {
+template <class loss_type, class loss_matrix> struct GA_result {
 
-  struct fitness_pair {
-    fitness_matrix population_fitness;
+  struct loss_pair {
+    loss_matrix population_loss;
     size_t best_gene_index;
   };
 
-  std::vector<fitness_pair> fitness_history;
+  std::vector<loss_pair> loss_history;
 };
 } // namespace cyka::genetic
 

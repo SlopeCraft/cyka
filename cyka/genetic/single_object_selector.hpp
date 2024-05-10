@@ -57,29 +57,29 @@ inline void select_genes_by_score(Eigen::ArrayXd &probability_score,
   assert(selected_count.sum() == expected_group_size);
 }
 
-inline void sort_genes(std::span<const double> fitness,
+inline void sort_genes(std::span<const double> loss,
                        std::vector<size_t> &rank) noexcept {
-  rank.resize(fitness.size());
-  for (size_t i = 0; i < fitness.size(); i++) {
+  rank.resize(loss.size());
+  for (size_t i = 0; i < loss.size(); i++) {
     rank[i] = i;
   }
 
-  std::sort(rank.begin(), rank.end(), [&fitness](size_t i, size_t j) {
-    return fitness[ptrdiff_t(i)] < fitness[ptrdiff_t(j)];
+  std::sort(rank.begin(), rank.end(), [&loss](size_t i, size_t j) {
+    return loss[ptrdiff_t(i)] < loss[ptrdiff_t(j)];
   });
 }
 
 [[nodiscard]] std::vector<size_t>
-sort_genes(std::span<const double> fitness) noexcept {
+sort_genes(std::span<const double> loss) noexcept {
   std::vector<size_t> dst;
-  sort_genes(fitness, dst);
+  sort_genes(loss, dst);
   return dst;
 }
 
 [[nodiscard]] std::vector<size_t>
-sort_genes(const Eigen::Array<double, 1, Eigen::Dynamic> &fitness) noexcept {
+sort_genes(const Eigen::Array<double, 1, Eigen::Dynamic> &loss) noexcept {
   return sort_genes(
-      std::span<const double>{fitness.data(), size_t(fitness.size())});
+      std::span<const double>{loss.data(), size_t(loss.size())});
 }
 
 void select_ranked_genes(Eigen::ArrayXd &probability_score,
@@ -134,14 +134,14 @@ struct empty_option {};
 
 class roulette_wheel : public selector_base<1, detail::empty_option> {
 public:
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand) noexcept override {
-    assert(expected_group_size <= fitness.size());
-    Eigen::ArrayXd scores = fitness.maxCoeff() - fitness.transpose();
+    assert(expected_group_size <= loss.size());
+    Eigen::ArrayXd scores = loss.maxCoeff() - loss.transpose();
 
     detail::select_genes_by_score(scores, selected_count,
-                                  fitness.size() - expected_group_size, rand);
+                                  loss.size() - expected_group_size, rand);
 
     static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
@@ -166,11 +166,11 @@ public:
     return std::nullopt;
   }
 
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand_engine) noexcept override {
-    const size_t pop_size_before = fitness.size();
-    selected_count.setZero(fitness.size());
+    const size_t pop_size_before = loss.size();
+    selected_count.setZero(loss.size());
 
     auto choose_tournament = [this, pop_size_before,
                               &rand_engine](std::vector<size_t> &src_indices) {
@@ -182,23 +182,23 @@ public:
                   this->select_option().tournament_size, rand_engine);
     };
     std::vector<size_t> tournament;
-    Eigen::ArrayXd tournament_fitness;
+    Eigen::ArrayXd tournament_loss;
     for (auto num_selected = 0zu; num_selected < expected_group_size;
          num_selected++) {
       choose_tournament(tournament);
       //      assert(tournament.size() ==
       //      this->select_option().tournament_size);
-      tournament_fitness.setZero((ptrdiff_t)tournament.size());
+      tournament_loss.setZero((ptrdiff_t)tournament.size());
       for (ptrdiff_t tournament_idx = 0; tournament_idx < tournament.size();
            tournament_idx++) {
-        tournament_fitness[tournament_idx] =
-            fitness[(ptrdiff_t)tournament[tournament_idx]];
+        tournament_loss[tournament_idx] =
+            loss[(ptrdiff_t)tournament[tournament_idx]];
       }
 
       Eigen::Index best_in_tournament = -1;
-      tournament_fitness.minCoeff(&best_in_tournament);
+      tournament_loss.minCoeff(&best_in_tournament);
       assert(best_in_tournament >= 0);
-      assert(best_in_tournament < fitness.size());
+      assert(best_in_tournament < loss.size());
       selected_count[best_in_tournament]++;
     }
 
@@ -209,27 +209,27 @@ public:
 
 class monte_carlo : public selector_base<1, detail::empty_option> {
 public:
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand) noexcept override {
-    assert(expected_group_size <= fitness.size());
+    assert(expected_group_size <= loss.size());
     Eigen::ArrayXd scores;
-    scores.setOnes(fitness.size());
+    scores.setOnes(loss.size());
     detail::select_genes_by_score(scores, selected_count,
-                                  fitness.size() - expected_group_size, rand);
+                                  loss.size() - expected_group_size, rand);
     static_assert(is_selector<std::decay_t<decltype(*this)>>);
   }
 };
 
 class truncation : public selector_base<1, detail::empty_option> {
 public:
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &) noexcept override {
-    selected_count.resize(fitness.size());
+    selected_count.resize(loss.size());
     selected_count.fill(0);
 
-    const auto rank = detail::sort_genes(fitness);
+    const auto rank = detail::sort_genes(loss);
     for (size_t i = 0; i < expected_group_size; i++) {
       selected_count[ptrdiff_t(rank[i])] = 1;
     }
@@ -261,24 +261,24 @@ public:
     return std::nullopt;
   }
 
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand_engine) noexcept override {
 
-    const size_t num_to_eliminate = fitness.size() - expected_group_size;
-    const size_t pop_size_before = fitness.cols();
+    const size_t num_to_eliminate = loss.size() - expected_group_size;
+    const size_t pop_size_before = loss.cols();
     if (num_to_eliminate <= 0) {
       selected_count.resize(int64_t(pop_size_before));
       selected_count.fill(1);
       return;
     }
-    assert(expected_group_size < fitness.size());
+    assert(expected_group_size < loss.size());
     assert(num_to_eliminate > 0);
     assert(pop_size_before > expected_group_size);
 
     const auto rank = detail::sort_genes(
-        std::span<const double>{fitness.data(), size_t(fitness.size())});
-    assert(rank.size() == fitness.size());
+        std::span<const double>{loss.data(), size_t(loss.size())});
+    assert(rank.size() == loss.size());
 
     Eigen::ArrayXd probability_score;
     assert(pop_size_before > 0);
@@ -287,7 +287,7 @@ public:
            this->select_option().worst_probability);
     assert(this->select_option().best_probability <= 1);
     probability_score.setLinSpaced(
-        fitness.size(),
+        loss.size(),
         this->select_option().best_probability / double(pop_size_before),
         this->select_option().worst_probability / double(pop_size_before));
 
@@ -312,12 +312,12 @@ public:
     return std::nullopt;
   }
 
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand_engine) noexcept override {
-    assert(fitness.rows() == 1);
-    assert(fitness.cols() >= expected_group_size);
-    const size_t pop_size_before = fitness.cols();
+    assert(loss.rows() == 1);
+    assert(loss.cols() >= expected_group_size);
+    const size_t pop_size_before = loss.cols();
     const size_t num_to_eliminate = pop_size_before - expected_group_size;
     selected_count.resize(int64_t(pop_size_before));
     selected_count.fill(1);
@@ -326,7 +326,7 @@ public:
     }
 
     const std::vector<size_t> rank = detail::sort_genes(
-        std::span<const double>{fitness.data(), size_t(fitness.size())});
+        std::span<const double>{loss.data(), size_t(loss.size())});
 
     const double c_minus_1_div_c_pow_N_minus_1 =
         (this->select_option().exponential_base - 1) /
@@ -353,7 +353,7 @@ struct boltzmann_option {
 /**
  * \brief The Boltzmann method works by exponential function. The probability of
  * a gene is in proportion with exp(b*f), where b is the selection strength and
- * f is the fitness value.
+ * f is the loss value.
  *
  * \note This method introduced one parameter: the selection strength b. For
  * maximum problems, b should be positive, while for minimize problems, b should
@@ -369,12 +369,12 @@ public:
     return std::nullopt;
   }
 
-  void select(const fitness_matrix &fitness, size_t expected_group_size,
+  void select(const loss_matrix &loss, size_t expected_group_size,
               Eigen::ArrayX<uint16_t> &selected_count,
               std::mt19937 &rand_engine) noexcept override {
-    assert(fitness.rows() == 1);
-    assert(fitness.cols() >= expected_group_size);
-    const size_t pop_size_before = fitness.cols();
+    assert(loss.rows() == 1);
+    assert(loss.cols() >= expected_group_size);
+    const size_t pop_size_before = loss.cols();
     const size_t num_to_eliminate = pop_size_before - expected_group_size;
     selected_count.resize(int64_t(pop_size_before));
     selected_count.fill(1);
@@ -382,9 +382,9 @@ public:
       return;
     }
 
-    auto fitness_col = fitness.transpose();
+    auto loss_col = loss.transpose();
     Eigen::ArrayXd probability_score =
-        (fitness_col * this->select_option().boltzmann_strength).exp();
+        (loss_col * this->select_option().boltzmann_strength).exp();
     //    double score_sum = probability_score.sum();
 
     detail::select_genes_by_score(probability_score, selected_count,
